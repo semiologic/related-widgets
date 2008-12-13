@@ -90,6 +90,10 @@ class widget_utils
 		echo '<ul>';
 		do_action($type . '_widget_config_affected');
 		echo '</ul>';
+		
+		echo '<p>'
+			. 'It will <b>NOT</b> affect anything else. In particular WordPress\'s built-in Pages widget. (Use the Silo Pages widget instead.)'
+			. '</p>';
 	
 		echo '<table style="width: 100%;">';
 		
