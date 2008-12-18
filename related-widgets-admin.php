@@ -4,6 +4,11 @@ if ( !class_exists('widget_utils') )
 	include dirname(__FILE__) . '/widget-utils.php';
 }
 
+if ( !class_exists('page_tags') )
+{
+	include dirname(__FILE__) . '/page-tags.php';
+}
+
 class related_widgets_admin
 {
 	#
