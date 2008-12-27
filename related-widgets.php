@@ -4,7 +4,7 @@ Plugin Name: Related Widgets
 Plugin URI: http://www.semiologic.com/software/widgets/related-widgets/
 Description: WordPress widgets that let you list related posts or pages. Requires that you tag your posts and pages.
 Author: Denis de Bernardy
-Version: 2.2.1 beta
+Version: 2.2.1 RC
 Author URI: http://www.getsemiologic.com
 Update Service: http://version.semiologic.com/plugins
 Update Tag: related_widgets
