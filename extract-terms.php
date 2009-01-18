@@ -91,14 +91,24 @@ class extract_terms
 			);
 
 		global $wpdb;
-			
+		
 		if ( !get_option('yt_cache_created') )
 		{
+			$charset_collate = '';
+
+			if ( $wpdb->has_cap( 'collation' ) ) {
+				if ( ! empty($wpdb->charset) )
+					$charset_collate = "DEFAULT CHARACTER SET $wpdb->charset";
+				if ( ! empty($wpdb->collate) )
+					$charset_collate .= " COLLATE $wpdb->collate";
+			}
+			
 			$wpdb->query("
 				CREATE TABLE $wpdb->yt_cache (
 					cache_id		varchar(32) PRIMARY KEY,
 					cache_content	text NOT NULL DEFAULT ''
-				);");
+				) $charset_collate;
+				");
 			
 			update_option('yt_cache_created', 1);
 		}
