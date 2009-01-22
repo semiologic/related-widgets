@@ -53,7 +53,8 @@ class related_widgets_admin
 		add_action('post_widget_config_affected', array('related_widgets_admin', 'widget_config_affected'));
 		add_action('page_widget_config_affected', array('related_widgets_admin', 'widget_config_affected'));
 	} # meta_boxes()
-
+	
+	
 	#
 	# widget_config_affected()
 	#
