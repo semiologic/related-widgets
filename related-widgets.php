@@ -6,7 +6,7 @@ Description: WordPress widgets that let you list related posts or pages. Require
 Version: 2.2.2 alpha
 Author: Denis de Bernardy
 Author URI: http://www.getsemiologic.com
-Update Package: https://members.semiologic.com/media/plugins/related-widgets.zip
+Update Package: https://members.semiologic.com/media/plugins/related-widgets/related-widgets.zip
 */
 
 /*
