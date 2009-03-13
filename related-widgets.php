@@ -526,7 +526,7 @@ class related_widgets
 	{
 		$o = related_widgets::get_options();
 		$k = time();
-		do $k++; while ( isset($o[$k]) );
+		while ( isset($o[$k]) ) $k++;
 		$o[$k] = related_widgets::default_options();
 		
 		update_option('related_widgets', $o);
