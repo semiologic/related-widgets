@@ -271,7 +271,7 @@ class related_widgets
 			$items[$key]->item_label = '<a href="'
 				. htmlspecialchars(apply_filters('the_permalink', get_permalink($items[$key]->ID)))
 				. '">'
-				. $items[$key]->post_label
+				. ( $items[$key]->post_label ? $items[$key]->post_label : __('Untitled') )
 				. '</a>'
 				. ( $options['score']
 					? ( ' (' . $items[$key]->item_score . '%)' )
@@ -371,7 +371,7 @@ class related_widgets
 			$items[$key]->item_label = '<a href="'
 				. htmlspecialchars(apply_filters('the_permalink', get_permalink($items[$key]->ID)))
 				. '">'
-				. $items[$key]->post_label
+				. ( $items[$key]->post_label ? $items[$key]->post_label : __('Untitled') )
 				. '</a>'
 				. ( $options['score']
 					? ( ' (' . $items[$key]->item_score . '%)' )
