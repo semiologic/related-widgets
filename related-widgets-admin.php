@@ -329,4 +329,9 @@ class related_widgets_admin
 } # related_widgets_admin
 
 related_widgets_admin::init();
+
+if ( !class_exists('extract_terms') )
+{
+	include dirname(__FILE__) . '/extract-terms.php';
+}
 ?>
