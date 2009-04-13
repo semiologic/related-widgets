@@ -47,7 +47,7 @@ class related_widgets
 			add_action($hook, array('related_widgets', 'clear_cache'));
 		}
 		
-		register_taxonomy('yahoo_terms', 'post', array('update_count_callback' => array('extract_terms', 'update_taxonomy_count')));
+		register_taxonomy('yahoo_terms', 'yterms', array('update_count_callback' => array('extract_terms', 'update_taxonomy_count')));
 		
 		register_activation_hook(__FILE__, array('related_widgets', 'clear_cache'));
 		register_deactivation_hook(__FILE__, array('related_widgets', 'clear_cache'));

@@ -37,7 +37,7 @@ class extract_terms
 		
 		$wpdb->yt_cache = $wpdb->prefix . 'yt_cache';
 		
-		register_taxonomy('yahoo_terms', 'post', array('update_count_callback' => array('extract_terms', 'update_taxonomy_count')));
+		register_taxonomy('yahoo_terms', 'yterms', array('update_count_callback' => array('extract_terms', 'update_taxonomy_count')));
 	} # end init()
 	
 	
