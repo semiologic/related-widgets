@@ -1,88 +1,171 @@
 // based on WP's post.js file
 
+function array_unique_noempty(b) {
+    var c = [];
+    jQuery.each(b,
+    function(a, d) {
+        d = jQuery.trim(d);
+        if (d && jQuery.inArray(d, c) == -1) {
+            c.push(d)
+        }
+    });
+    return c
+}
+
 function new_tag_remove_tag() {
-	var id = jQuery( this ).attr( 'id' );
-	var num = id.substr( 10 );
-	var current_tags = jQuery( '#tags-input' ).val().split(',');
-	delete current_tags[num];
-	var new_tags = [];
-	jQuery.each( current_tags, function( key, val ) {
-		if ( val && !val.match(/^\s+$/) && '' != val ) {
-			new_tags = new_tags.concat( val );
-		}
-	});
-	jQuery( '#tags-input' ).val( new_tags.join( ',' ).replace( /\s*,+\s*/, ',' ).replace( /,+/, ',' ).replace( /,+\s+,+/, ',' ).replace( /,+\s*$/, '' ).replace( /^\s*,+/, '' ) );
-	tag_update_quickclicks();
-	jQuery('#newtag').focus();
-	return false;
+    var e = jQuery(this).attr("id"),
+    a = e.split("-check-num-")[1],
+    c = jQuery(this).parents(".tagsdiv"),
+    b = c.find(".the-tags").val().split(","),
+    d = [];
+    delete b[a];
+    jQuery.each(b,
+    function(f, g) {
+        g = jQuery.trim(g);
+        if (g) {
+            d.push(g)
+        }
+    });
+    c.find(".the-tags").val(d.join(",").replace(/\s*,+\s*/, ",").replace(/,+/, ",").replace(/,+\s+,+/, ",").replace(/,+\s*$/, "").replace(/^\s*,+/, ""));
+    tag_update_quickclicks(c);
+    return false
 }
 
-function tag_update_quickclicks() {
-	var current_tags = jQuery( '#tags-input' ).val().split(',');
-	jQuery( '#tagchecklist' ).empty();
-	shown = false;
-//	jQuery.merge( current_tags, current_tags ); // this doesn't work anymore, need something to array_unique
-	jQuery.each( current_tags, function( key, val ) {
-		val = val.replace( /^\s+/, '' ).replace( /\s+$/, '' ); // trim
-		if ( !val.match(/^\s+$/) && '' != val ) {
-			txt = '<span><a id="tag-check-' + key + '" class="ntdelbutton">X</a>&nbsp;' + val + '</span> ';
-			jQuery( '#tagchecklist' ).append( txt );
-			jQuery( '#tag-check-' + key ).click( new_tag_remove_tag );
-			shown = true;
-		}
-	});
-	if ( shown )
-		jQuery( '#tagchecklist' ).prepend( '<strong>'+page_tagsL10n.tagsUsed+'</strong><br />' );
+function tag_update_quickclicks(b) {
+    if (jQuery(b).find(".the-tags").length == 0) {
+        return
+    }
+    var a = jQuery(b).find(".the-tags").val().split(",");
+    jQuery(b).find(".tagchecklist").empty();
+    shown = false;
+    jQuery.each(a,
+    function(e, f) {
+        var c,
+        d;
+        f = jQuery.trim(f);
+        if (!f.match(/^\s+$/) && "" != f) {
+            d = jQuery(b).attr("id") + "-check-num-" + e;
+            c = '<span><a id="' + d + '" class="ntdelbutton">X</a>&nbsp;' + f + "</span> ";
+            jQuery(b).find(".tagchecklist").append(c);
+            jQuery("#" + d).click(new_tag_remove_tag)
+        }
+    });
+
+    if (shown) {
+        jQuery(b).find(".tagchecklist").prepend("<strong>" + page_tagsL10n.tagsUsed + "</strong><br />")
+    }
 }
 
-function tag_flush_to_text() {
-	var newtags = jQuery('#tags-input').val() + ',' + jQuery('#newtag').val();
-	// massage
-	newtags = newtags.replace( /\s+,+\s*/g, ',' ).replace( /,+/g, ',' ).replace( /,+\s+,+/g, ',' ).replace( /,+\s*$/g, '' ).replace( /^\s*,+/g, '' );
-	jQuery('#tags-input').val( newtags );
-	tag_update_quickclicks();
-	jQuery('#newtag').val('');
-	jQuery('#newtag').focus();
-	return false;
+function tag_flush_to_text(g, b) {
+    b = b || false;
+    var e,
+    f,
+    c,
+    d;
+    e = jQuery("#" + g);
+    f = b ? jQuery(b).text() : e.find("input.newtag").val();
+    if (e.find("input.newtag").hasClass("form-input-tip") && !b) {
+        return false
+    }
+    c = e.find(".the-tags").val();
+    d = c ? c + "," + f: f;
+    d = d.replace(/\s+,+\s*/g, ",").replace(/,+/g, ",").replace(/,+\s+,+/g, ",").replace(/,+\s*$/g, "").replace(/^\s*,+/g, "");
+    d = array_unique_noempty(d.split(",")).join(",");
+    e.find(".the-tags").val(d);
+    tag_update_quickclicks(e);
+    if (!b) {
+        e.find("input.newtag").val("").focus()
+    }
+    return false
 }
 
 function tag_save_on_publish() {
-	if ( jQuery('#newtag').val() != page_tagsL10n.addTag )
-		tag_flush_to_text();
+    jQuery(".tagsdiv").each(function(a) {
+        if (!jQuery(this).find("input.newtag").hasClass("form-input-tip")) {
+            tag_flush_to_text(jQuery(this).parents(".tagsdiv").attr("id"))
+        }
+    })
 }
 
-function tag_press_key( e ) {
-	if ( 13 == e.keyCode ) {
-		tag_flush_to_text();
-		return false;
-	}
+function tag_press_key(a) {
+    if (13 == a.which) {
+        tag_flush_to_text(jQuery(a.target).parents(".tagsdiv").attr("id"));
+        return false
+    }
 }
 
-addLoadEvent( function() {
-	// If no tags on the page, skip the tag and category stuff.
-	if ( !jQuery('#tags-input').size() ) {
-		return;
-	}
+function tag_init() {
+    jQuery(".ajaxtag").show();
+    jQuery(".tagsdiv").each(function(a) {
+        tag_update_quickclicks(this)
+    });
+    jQuery(".ajaxtag input.tagadd").click(function() {
+        tag_flush_to_text(jQuery(this).parents(".tagsdiv").attr("id"))
+    });
+    jQuery(".ajaxtag input.newtag").focus(function() {
+        if (!this.cleared) {
+            this.cleared = true;
+            jQuery(this).val("").removeClass("form-input-tip")
+        }
+    });
+    jQuery(".ajaxtag input.newtag").blur(function() {
+        if (this.value == "") {
+            this.cleared = false;
+            jQuery(this).val(page_tagsL10n.addTag).addClass("form-input-tip")
+        }
+    });
+    jQuery("#publish").click(tag_save_on_publish);
+    jQuery("#save-post").click(tag_save_on_publish);
+    jQuery(".ajaxtag input.newtag").keypress(tag_press_key)
+}
 
-	jQuery('#tags-input').hide();
-	tag_update_quickclicks();
-	// add the quickadd form
-	jQuery('#jaxtag').prepend('<span id="ajaxtag"><input type="text" name="newtag" id="newtag" class="form-input-tip" size="16" autocomplete="off" value="'+page_tagsL10n.addTag+'" /><input type="button" class="button" id="tagadd" value="' + page_tagsL10n.add + '"/><input type="hidden"/><input type="hidden"/><span class="howto">'+page_tagsL10n.separate+'</span></span>');
-	jQuery('#tagadd').click( tag_flush_to_text );
-	jQuery('#newtag').focus(function() {
-		if ( this.value == page_tagsL10n.addTag )
-			jQuery(this).val( '' ).removeClass( 'form-input-tip' );
-	});
-	jQuery('#newtag').blur(function() {
-		if ( this.value == '' )
-			jQuery(this).val( page_tagsL10n.addTag ).addClass( 'form-input-tip' );
-	});
+var tagCloud;
 
-	// auto-save tags on page save/publish
-	jQuery('#publish').click( tag_save_on_publish );
-	jQuery('#save-post').click( tag_save_on_publish );
-
-	// auto-suggest stuff
-	jQuery('#newtag').suggest( 'admin-ajax.php?action=ajax-tag-search', { delay: 500, minchars: 2 } );
-	jQuery('#newtag').keypress( tag_press_key );
+ (function(a) {
+    tagCloud = {
+        init: function() {
+            a(".tagcloud-link").click(function() {
+                tagCloud.get(a(this).attr("id"));
+                a(this).unbind().click(function() {
+                    a(this).siblings(".the-tagcloud").toggle();
+                    return false
+                });
+                return false
+            })
+        },
+        get: function(c) {
+            var b = c.substr(c.indexOf("-") + 1);
+            a.post(ajaxurl, {
+                action: "get-tagcloud",
+                tax: b
+            },
+            function(e, d) {
+                if (0 == e || "success" != d) {
+                    e = wpAjax.broken
+                }
+                e = a('<p id="tagcloud-' + b + '" class="the-tagcloud">' + e + "</p>");
+                a("a", e).click(function() {
+                    var f = a(this).parents("p").attr("id");
+                    tag_flush_to_text(f.substr(f.indexOf("-") + 1), this);
+                    return false
+                });
+                a("#" + c).after(e)
+            })
+        }
+    };
+    a(document).ready(function() {
+        tagCloud.init()
+    })
+})(jQuery);
+jQuery(document).ready(function(g) {
+    tag_init();
+    g(".newtag").each(function() {
+        var k = g(this).parents("div.tagsdiv").attr("id");
+        g(this).suggest("admin-ajax.php?action=ajax-tag-search&tax=" + k, {
+            delay: 500,
+            minchars: 2,
+            multiple: true,
+            multipleSep: ", "
+        })
+    });
 });
