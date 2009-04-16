@@ -104,7 +104,7 @@ class extract_terms
 			}
 			
 			$old_yt_cache = $wpdb->prefix . 'yt_cache';
-			$wpdb->show_errors();
+			
 			$wpdb->query("
 				DROP TABLE IF EXISTS $old_yt_cache;
 			");
