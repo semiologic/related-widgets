@@ -35,7 +35,7 @@ class extract_terms
 	{
 		global $wpdb;
 		
-		$wpdb->yt_cache = $wpdb->prefix . 'yt_cache';
+		$wpdb->yt_cache = 'yterms';
 		
 		register_taxonomy('yahoo_terms', 'yterms', array('update_count_callback' => array('extract_terms', 'update_taxonomy_count')));
 	} # end init()
@@ -89,10 +89,10 @@ class extract_terms
 			"context" => $context,
 			"query" => $query
 			);
-
+		
 		global $wpdb;
 		
-		if ( !get_option('yt_cache_created') )
+		if ( get_option('yt_cache_created') < 2 )
 		{
 			$charset_collate = '';
 
@@ -103,6 +103,11 @@ class extract_terms
 					$charset_collate .= " COLLATE $wpdb->collate";
 			}
 			
+			$old_yt_cache = $wpdb->prefix . 'yt_cache';
+			$wpdb->show_errors();
+			$wpdb->query("
+				DROP TABLE IF EXISTS $old_yt_cache;
+			");
 			$wpdb->query("
 				CREATE TABLE $wpdb->yt_cache (
 					cache_id		varchar(32) PRIMARY KEY,
@@ -110,7 +115,7 @@ class extract_terms
 				) $charset_collate;
 				");
 			
-			update_option('yt_cache_created', 1);
+			update_option('yt_cache_created', 2);
 		}
 		
 		$cache_id = md5(preg_replace("/\s+/", " ", $context . $query));
