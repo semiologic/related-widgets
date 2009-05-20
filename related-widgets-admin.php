@@ -1,7 +1,7 @@
 <?php
 if ( !class_exists('widget_utils') )
 {
-	include dirname(__FILE__) . '/widget-utils.php';
+	include dirname(__FILE__) . '/widget-utils/widget-utils.php';
 }
 
 if ( !class_exists('page_tags') )
