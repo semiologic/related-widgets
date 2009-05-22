@@ -193,7 +193,7 @@ class related_widgets_admin
 			. '<div style="width: 330px; float: right;">'
 			. '<input style="width: 320px;"'
 			. ' id="related-widget-title-' . $number . '" name="related-widget[' . $number . '][title]"'
-			. ' type="text" value="' . attribute_escape($title) . '"'
+			. ' type="text" value="' . esc_attr($title) . '"'
 			. ' />'
 			. '</div>'
 			. '<div style="clear: both;"></div>'
@@ -239,7 +239,7 @@ class related_widgets_admin
 					: ''
 					)
 				. '>'
-				. __('Posts', 'related-widgets') . ' / ' . attribute_escape($option->label)
+				. __('Posts', 'related-widgets') . ' / ' . esc_attr($option->label)
 				. '</option>';
 		}
 
@@ -265,7 +265,7 @@ class related_widgets_admin
 					: ''
 					)
 				. '>'
-				. __('Pages', 'related-widgets') . ' / ' . attribute_escape($option->label)
+				. __('Pages', 'related-widgets') . ' / ' . esc_attr($option->label)
 				. '</option>';
 		}
 
