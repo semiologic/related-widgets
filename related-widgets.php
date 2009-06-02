@@ -38,7 +38,11 @@ if ( !defined('sem_widget_cache_debug') )
  * @package Related Widgets
  **/
 
-add_action('widgets_init', array('related_widget', 'widgets_init'));
+if ( version_compare(mysql_get_server_info(), '4.1', '<') ) {
+	add_action('admin_notices', array('related_widget', 'mysql_warning'));
+} else {
+	add_action('widgets_init', array('related_widget', 'widgets_init'));
+}
 
 foreach ( array('post.php', 'post-new.php', 'page.php', 'page-new.php') as $hook )
 	add_action('load-' . $hook, array('related_widget', 'editor_init'));
@@ -67,6 +71,21 @@ add_action('get_yterms', array('related_widget', 'get_yterms'));
 add_action('save_post', array('related_widget', 'save_post'));
 
 class related_widget extends WP_Widget {
+	/**
+	 * mysql_warning()
+	 *
+	 * @return void
+	 **/
+	
+	function mysql_warning() {
+		echo '<div class="error">'
+			. '<p><strong>' . __('Related Widgets Error', 'smart-links') . '</strong><br />' . "\n"
+			. sprintf(__('Your MySQL version is lower than 4.1. It\'s time to <a href="%s">change hosts</a> if yours doesn\'t want to upgrade.', 'related-widgets'), 'http://www.semiologic.com/resources/wp-basics/wordpress-server-requirements/')
+			. '</p>'
+			. '</div>' . "\n";
+	} # mysql_warning()
+	
+	
 	/**
 	 * editor_init()
 	 *
@@ -424,6 +443,12 @@ class related_widget extends WP_Widget {
 			$limit_sql = '';
 		}
 		
+		$exclude_sql = "
+			SELECT	post_id
+			FROM	$wpdb->postmeta
+			WHERE	meta_key = '_widgets_exclude'
+			";
+		
 		$score_sql = "
 			SELECT	$select_sql,
 					
@@ -541,6 +566,9 @@ class related_widget extends WP_Widget {
 			
 			# seed the mess
 			WHERE	object_tr.object_id = $post_id
+			
+			# manage excludes
+			AND		object_tr.object_id NOT IN ( $exclude_sql )
 			
 			# generate statistics
 			GROUP BY related_tr.object_id
