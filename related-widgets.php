@@ -64,6 +64,8 @@ register_deactivation_hook(__FILE__, array('related_widget', 'flush_cache'));
 add_action('wp', array('related_widget', 'wp'));
 add_action('get_yterms', array('related_widget', 'get_yterms'));
 
+add_action('save_post', array('related_widget', 'save_post'));
+
 class related_widget extends WP_Widget {
 	/**
 	 * editor_init()
