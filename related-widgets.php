@@ -552,7 +552,7 @@ class related_widget extends WP_Widget {
 			$limit_sql
 			";
 		
-		$wpdb->show_errors();
+#		$wpdb->show_errors();
 #		$res = $wpdb->get_results($score_sql);
 #		$query = end($wpdb->queries);
 #		dump(
