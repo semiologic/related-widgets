@@ -240,7 +240,7 @@ class related_widget extends WP_Widget {
 			$filter = intval($filter);
 			
 			if ( !get_transient('cached_section_ids') )
-				related_widget::cache_sections();
+				related_widget::cache_section_ids();
 			
 			$join_sql .= "
 				JOIN	$wpdb->postmeta as meta_filter
@@ -732,12 +732,12 @@ class related_widget extends WP_Widget {
 	
 	
 	/**
-	 * cache_sections()
+	 * cache_section_ids()
 	 *
 	 * @return void
 	 **/
 
-	function cache_sections() {
+	function cache_section_ids() {
 		global $wpdb;
 		
 		$pages = $wpdb->get_results("
@@ -756,7 +756,7 @@ class related_widget extends WP_Widget {
 		}
 		
 		set_transient('cached_section_ids', 1);
-	} # cache_sections()
+	} # cache_section_ids()
 	
 	
 	/**
