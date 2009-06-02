@@ -332,7 +332,7 @@ class related_widget extends WP_Widget {
 		if ( $join_sql ) {
 			$select_sql = "related_post.*";
 			
-			$limit_sql = "LIMIT " . min(5, max(15, (int) $limit));
+			$limit_sql = "LIMIT " . min(max((int) $limit, 1), 10);
 		} else {
 			# debug
 			$select_sql = "related_post.post_title,
@@ -583,7 +583,7 @@ class related_widget extends WP_Widget {
 		$instance = related_widget::defaults();
 		
 		$instance['title'] = strip_tags($new_instance['title']);
-		$instance['amount'] = min(max(intval($new_instance['amount']), 5), 15);
+		$instance['amount'] = min(max((int) $new_instance['amount'], 1), 10);
 		$instance['desc'] = isset($new_instance['desc']);
 		
 		$type_filter = explode('-', $new_instance['type_filter']);
@@ -664,7 +664,7 @@ class related_widget extends WP_Widget {
 		
 		echo '</optgroup>' . "\n";
 		
-		echo '<optgroup label="' . __('Posts', 'related-widgets') . '">' . "\n"
+		echo '<optgroup label="' . __('Pages', 'related-widgets') . '">' . "\n"
 			. '<option value="pages"' . selected($type == 'pages' && !$filter, true, false) . '>'
 			. __('Related Pages / All Sections', 'related-widgets')
 			. '</option>' . "\n";
@@ -685,7 +685,7 @@ class related_widget extends WP_Widget {
 		
 		echo '<p>'
 			. '<label>'
-			. sprintf(__('%s Related Items (5-15)', 'related-widgets'),
+			. sprintf(__('%s Related Items', 'related-widgets'),
 				'<input type="text" size="3" name="' . $this->get_field_name('amount') . '"'
 					. ' value="' . intval($amount) . '"'
 					. ' />')
@@ -755,11 +755,19 @@ class related_widget extends WP_Widget {
 		
 		update_post_cache($pages);
 		
+		$to_cache = array();
+		foreach ( $pages as $page )
+			$to_cache[] = $page->ID;
+		
+		update_postmeta_cache($to_cache);
+		
 		foreach ( $pages as $page ) {
 			$parent = $page;
 			while ( $parent->post_parent )
 				$parent = get_post($parent->post_parent);
-			update_post_meta($page->ID, '_section_id', "$parent->ID");
+			
+			if ( "$parent->ID" !== get_post_meta($page->ID, '_section_id', true) )
+				update_post_meta($page->ID, '_section_id', "$parent->ID");
 		}
 		
 		set_transient('cached_section_ids', 1);
