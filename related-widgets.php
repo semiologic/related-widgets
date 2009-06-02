@@ -38,11 +38,7 @@ if ( !defined('sem_widget_cache_debug') )
  * @package Related Widgets
  **/
 
-if ( version_compare(mysql_get_server_info(), '4.1', '<') ) {
-	add_action('admin_notices', array('related_widget', 'mysql_warning'));
-} else {
-	add_action('widgets_init', array('related_widget', 'widgets_init'));
-}
+add_action('widgets_init', array('related_widget', 'widgets_init'));
 
 foreach ( array('post.php', 'post-new.php', 'page.php', 'page-new.php') as $hook )
 	add_action('load-' . $hook, array('related_widget', 'editor_init'));
@@ -71,21 +67,6 @@ add_action('get_yterms', array('related_widget', 'get_yterms'));
 add_action('save_post', array('related_widget', 'save_post'));
 
 class related_widget extends WP_Widget {
-	/**
-	 * mysql_warning()
-	 *
-	 * @return void
-	 **/
-	
-	function mysql_warning() {
-		echo '<div class="error">'
-			. '<p><strong>' . __('Related Widgets Error', 'smart-links') . '</strong><br />' . "\n"
-			. sprintf(__('Your MySQL version is lower than 4.1. It\'s time to <a href="%s">change hosts</a> if yours doesn\'t want to upgrade.', 'related-widgets'), 'http://www.semiologic.com/resources/wp-basics/wordpress-server-requirements/')
-			. '</p>'
-			. '</div>' . "\n";
-	} # mysql_warning()
-	
-	
 	/**
 	 * editor_init()
 	 *
@@ -204,9 +185,9 @@ class related_widget extends WP_Widget {
 		foreach ( $posts as $post ) {
 			$label = get_post_meta($post->ID, '_widgets_label', true);
 			if ( $label === '' )
-				$post_label = $post->post_title;
+				$label = $post->post_title;
 			if ( $label === '' )
-				$post_labe = __('Untitled', 'related-widgets');
+				$label = __('Untitled', 'related-widgets');
 			
 			echo '<li>'
 				. '<a href="' . esc_url(apply_filters('the_permalink', get_permalink($post->ID))) . '"'
@@ -443,12 +424,6 @@ class related_widget extends WP_Widget {
 			$limit_sql = '';
 		}
 		
-		$exclude_sql = "
-			SELECT	post_id
-			FROM	$wpdb->postmeta
-			WHERE	meta_key = '_widgets_exclude'
-			";
-		
 		$score_sql = "
 			SELECT	$select_sql,
 					
@@ -564,11 +539,15 @@ class related_widget extends WP_Widget {
 			# join on posts and applicable filters
 			$join_sql
 			
+			LEFT JOIN $wpdb->postmeta as widgets_exclude
+			ON		widgets_exclude.post_id = related_post.ID
+			AND		widgets_exclude.meta_key = '_widgets_exclude'
+			
 			# seed the mess
 			WHERE	object_tr.object_id = $post_id
 			
 			# manage excludes
-			AND		object_tr.object_id NOT IN ( $exclude_sql )
+			AND		widgets_exclude.post_ID IS NULL
 			
 			# generate statistics
 			GROUP BY related_tr.object_id
@@ -672,14 +651,14 @@ class related_widget extends WP_Widget {
 		
 		echo '<optgroup label="' . __('Posts', 'related-widgets') . '">' . "\n"
 			. '<option value="posts"' . selected($type == 'posts' && !$filter, true, false) . '>'
-			. __('Related Posts / All Categories', 'related-posts')
+			. __('Related Posts / All Categories', 'related-widgets')
 			. '</option>' . "\n";
 		
 		foreach ( $categories as $category ) {
 			echo '<option value="posts-' . intval($category->term_id) . '"'
 					. selected($type == 'posts' && $filter == $category->term_id, true, false)
 					. '>'
-				. sprintf(__('Related Posts / %s', 'related-posts'), strip_tags($category->name))
+				. sprintf(__('Related Posts / %s', 'related-widgets'), strip_tags($category->name))
 				. '</option>' . "\n";
 		}
 		
@@ -687,14 +666,14 @@ class related_widget extends WP_Widget {
 		
 		echo '<optgroup label="' . __('Posts', 'related-widgets') . '">' . "\n"
 			. '<option value="pages"' . selected($type == 'pages' && !$filter, true, false) . '>'
-			. __('Related Pages / All Sections', 'related-posts')
+			. __('Related Pages / All Sections', 'related-widgets')
 			. '</option>' . "\n";
 		
 		foreach ( $pages as $page ) {
 			echo '<option value="pages-' . intval($page->ID) . '"'
 					. selected($type == 'pages' && $filter == $page->ID, true, false)
 					. '>'
-				. sprintf(__('Related Pages / %s', 'related-posts'), strip_tags($page->post_label))
+				. sprintf(__('Related Pages / %s', 'related-widgets'), strip_tags($page->post_label))
 				. '</option>' . "\n";
 		}
 		

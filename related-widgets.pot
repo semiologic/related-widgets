@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: 3.0\n"
 "Report-Msgid-Bugs-To: https://tickets.semiologic.com\n"
-"POT-Creation-Date: 2009-06-02 10:18+0200\n"
+"POT-Creation-Date: 2009-06-02 12:25+0200\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -45,73 +45,62 @@ msgstr ""
 msgid "Choose from the most used tags in %s"
 msgstr ""
 
-#: related-widgets.php:82
-msgid "Related Widgets Error"
-msgstr ""
-
-#: related-widgets.php:83
-#, php-format
-msgid ""
-"Your MySQL version is lower than 4.1. It's time to <a href=\"%s\">change "
-"hosts</a> if yours doesn't want to upgrade."
-msgstr ""
-
-#: related-widgets.php:119
+#: related-widgets.php:100
 msgid "Related Widgets"
 msgstr ""
 
-#: related-widgets.php:144
+#: related-widgets.php:125
 msgid "Related Posts or Pages, based on your tags."
 msgstr ""
 
-#: related-widgets.php:150
+#: related-widgets.php:131
 msgid "Related Widget"
 msgstr ""
 
-#: related-widgets.php:209
+#: related-widgets.php:190
 msgid "Untitled"
 msgstr ""
 
-#: related-widgets.php:661
+#: related-widgets.php:640
 msgid "Title:"
 msgstr ""
 
-#: related-widgets.php:670
+#: related-widgets.php:649
 msgid "Display:"
 msgstr ""
 
-#: related-widgets.php:673 related-widgets.php:688
+#: related-widgets.php:652 related-widgets.php:667
 msgid "Posts"
 msgstr ""
 
-#: related-widgets.php:675
+#: related-widgets.php:654
 msgid "Related Posts / All Categories"
 msgstr ""
 
-#: related-widgets.php:682
+#: related-widgets.php:661
 #, php-format
 msgid "Related Posts / %s"
 msgstr ""
 
-#: related-widgets.php:690
+#: related-widgets.php:669
 msgid "Related Pages / All Sections"
 msgstr ""
 
-#: related-widgets.php:697
+#: related-widgets.php:676
 #, php-format
 msgid "Related Pages / %s"
 msgstr ""
 
-#: related-widgets.php:709
+#: related-widgets.php:688
 #, php-format
 msgid "%s Related Items (5-15)"
 msgstr ""
 
-#: related-widgets.php:722
+#: related-widgets.php:701
 msgid "Show Descriptions"
 msgstr ""
 
-#: related-widgets.php:736
+#: related-widgets.php:715
 msgid "Related Posts"
 msgstr ""
 
