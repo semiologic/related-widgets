@@ -3,7 +3,7 @@
 Plugin Name: Related Widgets
 Plugin URI: http://www.semiologic.com/software/related-widgets/
 Description: WordPress widgets that let you list related posts or pages. Requires that you tag your posts and pages.
-Version: 2.3 alpha
+Version: 3.0 RC
 Author: Denis de Bernardy
 Author URI: http://www.getsemiologic.com
 Text Domain: related-widgets-info
@@ -20,580 +20,811 @@ http://www.mesoconcepts.com/license/
 **/
 
 
-load_plugin_textdomain('related-widgets','wp-content/plugins/related-widgets');
+load_plugin_textdomain('related-widgets', null, dirname(__FILE__) . '/lang');
 
-class related_widgets
-{
-	#
-	# init()
-	#
+if ( !defined('widget_utils_textdomain') )
+	define('widget_utils_textdomain', 'related-widgets');
 
-	function init()
-	{
-		add_action('widgets_init', array('related_widgets', 'widgetize'));
+if ( !defined('page_tags_textdomain') )
+	define('page_tags_textdomain', 'related-widgets');
 
-		foreach ( array(
-				'save_post',
-				'delete_post',
-				'switch_theme',
-				'update_option_active_plugins',
-				'update_option_show_on_front',
-				'update_option_page_on_front',
-				'update_option_page_for_posts',
-				'update_option_sidebars_widgets',
-				'update_option_sem5_options',
-				'update_option_sem6_options',
-				'generate_rewrite_rules',
-				) as $hook)
-		{
-			add_action($hook, array('related_widgets', 'clear_cache'));
-		}
+if ( !defined('sem_widget_cache_debug') )
+	define('sem_widget_cache_debug', false);
+
+
+/**
+ * related_widget
+ *
+ * @package Related Widgets
+ **/
+
+add_action('widgets_init', array('related_widget', 'widgets_init'));
+
+foreach ( array('post.php', 'post-new.php', 'page.php', 'page-new.php') as $hook )
+	add_action('load-' . $hook, array('related_widget', 'editor_init'));
+
+foreach ( array(
+		'save_post',
+		'delete_post',
+		'switch_theme',
+		'update_option_active_plugins',
+		'update_option_show_on_front',
+		'update_option_page_on_front',
+		'update_option_page_for_posts',
+		'update_option_sidebars_widgets',
+		'update_option_sem5_options',
+		'update_option_sem6_options',
+		'generate_rewrite_rules',
+		) as $hook)
+	add_action($hook, array('related_widget', 'flush_cache'));
+
+register_activation_hook(__FILE__, array('related_widget', 'flush_cache'));
+register_deactivation_hook(__FILE__, array('related_widget', 'flush_cache'));
+
+add_action('wp', array('related_widget', 'wp'));
+add_action('get_yterms', array('related_widget', 'get_yterms'));
+
+class related_widget extends WP_Widget {
+	/**
+	 * editor_init()
+	 *
+	 * @return void
+	 **/
+
+	function editor_init() {
+		if ( !class_exists('widget_utils') )
+			include dirname(__FILE__) . '/widget-utils/widget-utils.php';
 		
-		register_taxonomy('yahoo_terms', 'yterms', array('update_count_callback' => array('extract_terms', 'update_taxonomy_count')));
+		widget_utils::post_meta_boxes();
+		widget_utils::page_meta_boxes();
+		add_action('post_widget_config_affected', array('related_widget', 'widget_config_affected'));
+		add_action('page_widget_config_affected', array('related_widget', 'widget_config_affected'));
 		
-		register_activation_hook(__FILE__, array('related_widgets', 'clear_cache'));
-		register_deactivation_hook(__FILE__, array('related_widgets', 'clear_cache'));
-	} # init()
-
-
-	#
-	# widgetize()
-	#
-
-	function widgetize()
-	{
-		$options = related_widgets::get_options();
+		if ( !class_exists('page_tags') )
+			include dirname(__FILE__) . '/page-tags/page-tags.php';
 		
-		$widget_options = array('classname' => 'related_widget', 'description' => __( "Related posts or pages") );
-		$control_options = array('width' => 500, 'id_base' => 'related-widget');
-		
-		$id = false;
+		page_tags::meta_boxes();
+	} # editor_init()
+	
+	
+	/**
+	 * widget_config_affected()
+	 *
+	 * @return void
+	 **/
 
-		# registered widgets
-		foreach ( array_keys($options) as $o )
-		{
-			if ( !is_numeric($o) ) continue;
-			$id = "related-widget-$o";
+	function widget_config_affected() {
+		echo '<li>'
+			. __('Related Widgets', 'related-widgets')
+			. '</li>' . "\n";
+	} # widget_config_affected()
+	
+	
+	/**
+	 * widgets_init()
+	 *
+	 * @return void
+	 **/
 
-			wp_register_sidebar_widget($id, __('Related Widget'), array('related_widgets', 'display_widget'), $widget_options, array( 'number' => $o ));
-			wp_register_widget_control($id, __('Related Widget'), array('related_widgets_admin', 'widget_control'), $control_options, array( 'number' => $o ) );
-		}
-		
-		# default widget if none were registered
-		if ( !$id )
-		{
-			$id = "related-widget-1";
-			wp_register_sidebar_widget($id, __('Related Widget'), array('related_widgets', 'display_widget'), $widget_options, array( 'number' => -1 ));
-			wp_register_widget_control($id, __('Related Widget'), array('related_widgets_admin', 'widget_control'), $control_options, array( 'number' => -1 ) );
-		}
-	} # widgetize()
+	function widgets_init() {
+		register_widget('related_widget');
+	} # widgets_init()
+	
+	
+	/**
+	 * related_widget()
+	 *
+	 * @return void
+	 **/
 
+	function related_widget() {
+		$widget_ops = array(
+			'classname' => 'related_widget',
+			'description' => __("Related Posts or Pages, based on your tags.", 'related-widgets'),
+			);
+		$control_ops = array(
+			'width' => 330,
+			);
+		
+		$this->WP_Widget('related_widget', __('Related Widget', 'related-widgets'), $widget_ops, $control_ops);
+	} # related_widget()
+	
+	
+	/**
+	 * widget()
+	 *
+	 * @param array $args widget args
+	 * @param array $instance widget options
+	 * @return void
+	 **/
 
-	#
-	# display_widget()
-	#
-
-	function display_widget($args, $widget_args = 1)
-	{
-		# fetch object_id
-		if ( !is_admin() )
-		{
-			if ( in_the_loop() )
-			{
-				$object_id = get_the_ID();
-			}
-			elseif ( is_singular() )
-			{
-				$object_id = $GLOBALS['wp_query']->get_queried_object_id();
-			}
-			else
-			{
-				return ;
-			}
-		}
+	function widget($args, $instance) {
+		extract($args, EXTR_SKIP);
+		extract($instance, EXTR_SKIP);
 		
-		if ( is_numeric($widget_args) )
-			$widget_args = array( 'number' => $widget_args );
-		$widget_args = wp_parse_args( $widget_args, array( 'number' => -1 ) );
-		extract( $widget_args, EXTR_SKIP );
+		if ( is_admin() || !in_array($type, array('pages', 'posts')) )
+			return;
 		
-		$number = intval($number);
-		
-		# front end: serve cache if available
-		if ( !is_admin() )
-		{
-			if ( in_array(
-					'_related_widgets_cache_' . $number,
-					(array) get_post_custom_keys($object_id)
-					)
-				)
-			{
-				$cache = get_post_meta($object_id, '_related_widgets_cache_' . $number, true);
-				echo $cache;
-				return;
-			}
-		}
-		
-		# get options
-		$options = related_widgets::get_options();
-		$options = $options[$number];
-		$options['object_id'] = $object_id;
-		
-		# admin area: serve a formatted title
-		if ( is_admin() )
-		{
-			echo $args['before_widget']
-				. $args['before_title'] . $options['title'] . $args['after_title']
-				. $args['after_widget'];
-
+		if ( is_singular() ) {
+			global $wp_the_query;
+			$post_id = (int) $wp_the_query->get_queried_object_id();
+		} elseif ( in_the_loop() ) {
+			$post_id = (int) get_the_ID();
+		} else {
 			return;
 		}
 		
-		$do_cache = true;
-
-		# fetch yahoo terms if not available
-		if ( !count(wp_get_object_terms($object_id, 'yahoo_terms'))
-			&& !get_post_meta($object_id, '_related_widgets_got_yahoo_terms', true)
-			)
-		{
-			# fetch terms after output buffer gets flushed
-			add_action('shutdown', create_function('', "related_widgets::extract_terms($object_id);"));
-			
-			# kill caching
-			$do_cache = false;
+		$cache_id = "_$widget_id";
+		$o = get_post_meta($post_id, $cache_id, true);
+		
+		if ( !sem_widget_cache_debug && $o ) {
+			echo $o;
+			return;
 		}
 		
-		# initialize
-		$o = '';
-		
-		# fetch items
-		switch ( $options['type'] )
-		{
-		case 'posts':
-			$items = related_widgets::get_posts($options);
-			break;
-
+		switch ( $type ) {
 		case 'pages':
-			$items = related_widgets::get_pages($options);
+			$posts = related_widget::get_pages($post_id, $instance);
 			break;
-
-		default:
-			$items = array();
-		}
-
-		# fetch output
-		if ( $items )
-		{
-			$o .= $args['before_widget'] . "\n"
-				. ( $options['title']
-					? ( $args['before_title'] . $options['title'] . $args['after_title'] . "\n" )
-					: ''
-					);
-
-			$o .= '<ul>' . "\n";
-
-			foreach ( $items as $item )
-			{
-				$o .= '<li>'
-					. $item->item_label
-					. '</li>' . "\n";
-			}
-
-			$o .= '</ul>' . "\n";
-
-			$o .= $args['after_widget'] . "\n";
-		}
-
-		# cache
-		# delete_post_meta($object_id, '_related_widgets_cache_' . $number);
-		if ( $do_cache )
-		{
-			add_post_meta($object_id, '_related_widgets_cache_' . $number, $o, true);
+		case 'posts':
+			$posts = related_widget::get_posts($post_id, $instance);
+			break;
 		}
 		
-		# display
+		ob_start();
+		
+		echo $before_widget;
+		
+		if ( $title )
+			echo $before_title . $title . $after_title;
+		
+		echo '<ul>' . "\n";
+		
+		foreach ( $posts as $post ) {
+			$label = get_post_meta($post->ID, '_widgets_label', true);
+			if ( $label === '' )
+				$post_label = $post->post_title;
+			if ( $label === '' )
+				$post_labe = __('Untitled', 'related-widgets');
+			
+			echo '<li>'
+				. '<a href="' . esc_url(apply_filters('the_permalink', get_permalink($post->ID))) . '"'
+					. ' title="' . esc_attr($label) . '"'
+					. '>'
+				. $label
+				. '</a>';
+				
+				if ( $desc ) {
+					$descr = trim(get_post_meta($post->ID, '_widgets_desc', true));
+					if ( $descr )
+						echo "\n\n" . wpautop($descr);
+				}
+				
+				echo '</li>' . "\n";
+		}
+		
+		echo '</ul>' . "\n";
+		
+		echo $after_widget;
+		
+		$o = ob_get_clean();
+		
+		update_post_meta($post_id, $cache_id, $o);
+		
 		echo $o;
-	} # display_widget()
+	} # widget()
+	
+	
+	/**
+	 * get_pages()
+	 *
+	 * @param int $post_id
+	 * @param array $instance
+	 * @return array $posts
+	 **/
 
-
-	#
-	# get_posts()
-	#
-
-	function get_posts($options)
-	{
+	function get_pages($post_id, $instance) {
 		global $wpdb;
-
-		$exclude_sql = "
-			SELECT	post_id
-			FROM	$wpdb->postmeta
-			WHERE	meta_key = '_widgets_exclude'
-			";
-
-		$items_sql = "
-			SELECT	posts.*,
-					posts.ID as item_id,
-					lower( post_title ) as item_name,
-					COALESCE(post_label.meta_value, post_title) as post_label,
-					COALESCE(post_desc.meta_value, '') as post_desc
-			FROM	$wpdb->posts as posts
-			"
-			. ( $options['filter']
-				? ( "
-			INNER JOIN $wpdb->term_relationships as term_relationships
-			ON		term_relationships.object_id = posts.ID
-			INNER JOIN $wpdb->term_taxonomy as term_taxonomy
-			ON		term_taxonomy.term_taxonomy_id = term_relationships.term_taxonomy_id
-			AND		term_taxonomy.taxonomy = 'category'
-			AND		term_taxonomy.term_id = " . intval($options['filter'])
-			)
-				: ''
-				)
-			. "
-			LEFT JOIN $wpdb->postmeta as post_label
-			ON		post_label.post_id = posts.ID
-			AND		post_label.meta_key = '_widgets_label'
-			LEFT JOIN $wpdb->postmeta as post_desc
-			ON		post_desc.post_id = posts.ID
-			AND		post_desc.meta_key = '_widgets_desc'
-			WHERE	posts.post_status = 'publish'
-			AND		posts.post_type = 'post'
-			AND		posts.post_password = ''
-			AND		posts.ID NOT IN ( $exclude_sql )
-			AND		posts.ID <> " . intval($options['object_id']) . "
-			"
-			;
-
-		$items = related_widgets::get_items($items_sql, $options);
-
-		update_post_cache($items);
-
-		foreach ( array_keys($items) as $key )
-		{
-			$items[$key]->item_label = '<a href="'
-				. htmlspecialchars(apply_filters('the_permalink', get_permalink($items[$key]->ID)))
-				. '">'
-				. ( $items[$key]->post_label ? $items[$key]->post_label : __('Untitled') )
-				. '</a>'
-				. ( $options['score']
-					? ( ' (' . $items[$key]->item_score . '%)' )
-					: ''
-					)
-				. ( $options['desc'] && $items[$key]->post_desc
-					? wpautop($items[$key]->post_desc)
-					: ''
-					);
+		extract($instance, EXTR_SKIP);
+		
+		$join_sql = "
+				JOIN	$wpdb->posts as related_post
+				ON		related_post.ID = related_tr.object_id
+				AND		related_post.post_status = 'publish'
+				AND		related_post.post_type = 'page'
+				";
+		
+		if ( $filter ) {
+			$filter = intval($filter);
+			
+			if ( !get_transient('cached_section_ids') )
+				related_widget::cache_sections();
+			
+			$join_sql .= "
+				JOIN	$wpdb->postmeta as meta_filter
+				ON		meta_filter.post_id = related_tr.object_id
+				AND		meta_filter.meta_key = '_section_id'
+				AND		meta_filter.meta_value = '$filter'
+				";
 		}
-
-		return $items;
-	} # get_posts()
-
-
-	#
-	# get_pages()
-	#
-
-	function get_pages($options)
-	{
-		global $wpdb;
-		global $page_filters;
-
-		$exclude_sql = "
-			SELECT	post_id
-			FROM	$wpdb->postmeta
-			WHERE	meta_key = '_widgets_exclude'
-			";
-
-		if ( $options['filter'] )
-		{
-			if ( isset($page_filters[$options['filter']]) )
-			{
-				$parents_sql = $page_filters[$options['filter']];
-			}
-			else
-			{
-				$parents = array($options['filter']);
-
-				do
-				{
-					$old_parents = $parents;
-
-					$parents_sql = implode(', ', $parents);
-
-					$parents = (array) $wpdb->get_col("
-						SELECT	posts.ID
-						FROM	$wpdb->posts as posts
-						WHERE	posts.post_status = 'publish'
-						AND		posts.post_type = 'page'
-						AND		( posts.ID IN ( $parents_sql ) OR posts.post_parent IN ( $parents_sql ) )
-						");
-					
-					sort($parents);
-				} while ( $parents != $old_parents );
-
-				$page_filters[$options['filter']] = $parents_sql;
-			}
-		}
-
-		$items_sql = "
-			SELECT	posts.*,
-					posts.ID as item_id,
-					lower( post_title ) as item_name,
-					COALESCE(post_label.meta_value, post_title) as post_label,
-					COALESCE(post_desc.meta_value, '') as post_desc
-			FROM	$wpdb->posts as posts
-			LEFT JOIN $wpdb->postmeta as post_label
-			ON		post_label.post_id = posts.ID
-			AND		post_label.meta_key = '_widgets_label'
-			LEFT JOIN $wpdb->postmeta as post_desc
-			ON		post_desc.post_id = posts.ID
-			AND		post_desc.meta_key = '_widgets_desc'
-			WHERE	posts.post_status = 'publish'
-			AND		posts.post_type = 'page'
-			AND		posts.post_password = ''
-			"
-			. ( $options['filter']
-				? ( "
-			AND		posts.post_parent IN ( $parents_sql )
-			" )
-				: ''
-				)
-			. "
-			AND		posts.ID NOT IN ( $exclude_sql )
-			AND		posts.ID <> " . intval($options['object_id']) . "
-			"
-			;
-
-		$items = related_widgets::get_items($items_sql, $options);
-
-		update_post_cache($items);
-
-		foreach ( array_keys($items) as $key )
-		{
-			$items[$key]->item_label = '<a href="'
-				. htmlspecialchars(apply_filters('the_permalink', get_permalink($items[$key]->ID)))
-				. '">'
-				. ( $items[$key]->post_label ? $items[$key]->post_label : __('Untitled') )
-				. '</a>'
-				. ( $options['score']
-					? ( ' (' . $items[$key]->item_score . '%)' )
-					: ''
-					)
-				. ( $options['desc'] && $items[$key]->post_desc
-					? wpautop($items[$key]->post_desc)
-					: ''
-					);
-		}
-
-		return $items;
+		
+		$score_sql = related_widget::get_score_sql($post_id, $join_sql, $amount);
+		
+		$posts = $wpdb->get_results($score_sql);
+		update_post_cache($posts);
+		
+		$post_ids = array();
+		foreach ( $posts as $post )
+			$post_ids[] = $post->ID;
+		update_postmeta_cache($post_ids);
+		
+		return $posts;
 	} # get_pages()
+	
+	
+	/**
+	 * get_posts()
+	 *
+	 * @param int $post_id
+	 * @param array $instance
+	 * @return array $posts
+	 **/
 
-
-	#
-	# get_items()
-	#
-
-	function get_items($items_sql, $options)
-	{
+	function get_posts($post_id, $instance) {
 		global $wpdb;
-
-		$term_scores_sql = "
-			SELECT	term_relationships.object_id,
-					term_relationships.term_taxonomy_id,
-					CASE
-					WHEN
-						term_taxonomy.taxonomy = 'post_tag'
-					THEN
-						100
-					ELSE
-						75
-					END as taxonomy_score,
-					CASE
-					WHEN
-						term_relationships.object_id = " . intval($options['object_id']) . "
-					THEN
-						100
-					WHEN
-						term_relationships.object_id = object_relationships.object_id
-					THEN
-						90
-					ELSE
-						80
-					END as relationship_score
-			FROM	$wpdb->term_relationships as object_relationships
-			INNER JOIN $wpdb->term_taxonomy as object_taxonomy
-			ON		object_taxonomy.taxonomy IN ( 'post_tag', 'yahoo_terms' )
-			AND		object_taxonomy.term_taxonomy_id = object_relationships.term_taxonomy_id
-			INNER JOIN $wpdb->terms as object_terms
-			ON		object_terms.term_id = object_taxonomy.term_id
-			INNER JOIN $wpdb->term_relationships as related_relationships
-			ON		related_relationships.term_taxonomy_id = object_relationships.term_taxonomy_id
-			INNER JOIN $wpdb->term_relationships as term_relationships
-			ON		term_relationships.object_id = related_relationships.object_id
-			INNER JOIN $wpdb->term_taxonomy as term_taxonomy
-			ON		term_taxonomy.taxonomy IN ( 'post_tag', 'yahoo_terms' )
-			AND		term_taxonomy.term_taxonomy_id = term_relationships.term_taxonomy_id
-			WHERE	object_relationships.object_id = " . intval($options['object_id']) . "
-			";
-
-		#dump($term_scores_sql);
-		#dump($wpdb->get_results($term_scores_sql));
-
-		$term_weights_sql = "
-			SELECT	object_id,
-					term_taxonomy_id,
-					MAX( ( taxonomy_score * relationship_score ) ) as term_weight
-			FROM	( $term_scores_sql ) as term_scores
-			GROUP BY object_id, term_taxonomy_id
-			";
-
-		#dump($term_weights_sql);
-		#dump($wpdb->get_results($term_weights_sql));
-
-
-		$object_weights_sql = "
-			SELECT	object_id,
-					SUM( term_weight ) as object_weight
-			FROM	( $term_weights_sql ) as term_weights
-			GROUP BY object_id
-			";
-
-		#dump($wpdb->get_results($object_weights_sql));
-
-
-		$object_scores = "
-			SELECT	object_id,
-					object_weight,
-					MAX( max_weight ) as max_weight
-			FROM	( $object_weights_sql ) as object_weights,
-					(
-					SELECT	object_weight as max_weight
-					FROM	( $object_weights_sql ) as max_weights
-					) as max_weights
-			GROUP BY object_id
-			ORDER BY object_weight DESC
-			LIMIT " . intval($options['amount'])
-			;
-
-		#dump($wpdb->get_results($object_scores));
-
-
-		$items = (array) $wpdb->get_results("
-			SELECT	items.*,
-					floor( 100 * exp( ( object_weight + max_weight ) / ( 2 * max_weight ) ) / exp( 1 ) ) as item_score
-			FROM	( $items_sql ) as items
-			INNER JOIN ( $object_scores ) as related_objects
-			ON		related_objects.object_id = items.item_id
-			ORDER BY item_score DESC, lower(items.item_name)
-			");
-
-		#dump($items);
-
-		return $items;
-	} # get_items()
-
-
-	#
-	# clear_cache()
-	#
-
-	function clear_cache($in = null)
-	{
-		global $wpdb;
-		$wpdb->query("DELETE FROM $wpdb->postmeta WHERE meta_key LIKE '_related_widgets_cache%'");
-
-		return $in;
-	} # clear_cache()
-
-
-	#
-	# get_options()
-	#
-
-	function get_options()
-	{
-		if ( ( $o = get_option('related_widgets') ) === false )
-		{
-			$o = array();
-
-			update_option('related_widgets', $o);
+		extract($instance, EXTR_SKIP);
+		
+		$join_sql = "
+				JOIN	$wpdb->posts as related_post
+				ON		related_post.ID = related_tr.object_id
+				AND		related_post.post_status = 'publish'
+				AND		related_post.post_type = 'post'
+				";
+		
+		if ( $filter ) {
+			$filter = intval($filter);
+			
+			$join_sql .= "
+				JOIN	$wpdb->term_relationships as filter_tr
+				ON		filter_tr.object_id = related_tr.object_id
+				JOIN	$wpdb->term_taxonomy as filter_tt
+				ON		filter_tt.term_taxonomy_id = filter_tr.term_taxonomy_id
+				AND		filter_tt.term_id = $filter
+				AND		filter_tt.taxonomy = 'category'
+				";
 		}
-
-		return $o;
-	} # get_options()
-	
-	
-	#
-	# new_widget()
-	#
-	
-	function new_widget()
-	{
-		$o = related_widgets::get_options();
-		$k = time();
-		while ( isset($o[$k]) ) $k++;
-		$o[$k] = related_widgets::default_options();
 		
-		update_option('related_widgets', $o);
+		$score_sql = related_widget::get_score_sql($post_id, $join_sql, $amount);
 		
-		return 'related-widget-' . $k;
-	} # new_widget()
+		$posts = $wpdb->get_results($score_sql);
+		update_post_cache($posts);
+		
+		$post_ids = array();
+		foreach ( $posts as $post )
+			$post_ids[] = $post->ID;
+		update_postmeta_cache($post_ids);
+		
+		return $posts;
+	} # get_posts()
+	
+	
+	/**
+	 * get_score_sql()
+	 *
+	 * @todo: create unique index object_id_term_taxonomy_id on wp_term_relationships ( term_taxonomy_id, object_id );
+	 *
+	 * @return string $str
+	 **/
 
+	function get_score_sql($post_id, $join_sql = '', $limit = '') {
+		global $wpdb;
+		
+		$taxonomies = apply_filters('related_widget_taxonomies', array('post_tag'));
+		$taxonomies = array_map(array(&$wpdb, 'escape'), $taxonomies);
+		$taxonomies = implode("', '", $taxonomies);
+		
+		$term_weight = 105;
+		$seed_weight = 120;
+		$path_weight = 110;
+		
+		if ( $join_sql ) {
+			$select_sql = "related_post.*";
+			
+			$limit_sql = "LIMIT " . min(5, max(15, (int) $limit));
+		} else {
+			# debug
+			$select_sql = "related_post.post_title,
+					
+					# num_terms
+					COUNT( DISTINCT seed_tt.term_id )
+					as num_terms,
+				
+					# num_seeds
+					COUNT( DISTINCT seed_tr.object_id )
+					as num_seeds,
+					
+					# num_paths
+					COUNT( DISTINCT seed_tr.object_id, seed_tt.term_id )
+					as num_path,
+					
+					# direct_terms
+					COUNT( DISTINCT
+						CASE seed_tr.object_id = object_tr.object_id
+						WHEN	TRUE
+						THEN	seed_tt.term_id
+						ELSE	NULL
+						END )
+					as direct_terms,
+					
+					# indirect_terms
+					CASE COUNT( DISTINCT
+						CASE seed_tr.object_id <> object_tr.object_id
+						WHEN	TRUE
+						THEN	seed_tt.term_id
+						ELSE	NULL
+						END )
+					WHEN	0
+					THEN	0
+					ELSE
+						COUNT( DISTINCT seed_tt.term_id )
+						- COUNT( DISTINCT
+						CASE seed_tr.object_id = object_tr.object_id
+						WHEN	TRUE
+						THEN	seed_tt.term_id
+						ELSE	NULL
+						END )
+					END
+					as indirect_terms,
+					
+					# direct seeds
+					COUNT( DISTINCT
+						CASE seed_tr.object_id = object_tr.object_id
+						WHEN	TRUE
+						THEN	seed_tr.object_id
+						ELSE	NULL
+						END )
+					as direct_seeds,
+					
+					# indirect seeds
+					COUNT( DISTINCT
+						CASE seed_tr.object_id <> object_tr.object_id
+						WHEN	TRUE
+						THEN	seed_tr.object_id
+						ELSE	NULL
+						END )
+					as indirect_seeds,
+					
+					# direct paths
+					COUNT( DISTINCT
+						CASE seed_tr.object_id = object_tr.object_id
+						WHEN	TRUE
+						THEN	seed_tt.term_id
+						ELSE	NULL
+						END )
+					as direct_paths,
+					
+					# indirect paths
+					COUNT( DISTINCT seed_tr.object_id, seed_tt.term_id )
+					- COUNT(
+						DISTINCT CASE seed_tr.object_id = object_tr.object_id
+						WHEN	TRUE
+						THEN	seed_tt.term_id
+						ELSE	NULL
+						END )
+					as indirect_paths";
+			
+			$join_sql = "
+			JOIN	$wpdb->posts as related_post
+			ON 		related_post.ID = related_tr.object_id
+			AND		related_post.post_status = 'publish'
+			";
+			
+			$limit_sql = '';
+		}
+		
+		$score_sql = "
+			SELECT	$select_sql,
+					
+					$term_weight * (
+					# direct terms
+					COUNT( DISTINCT
+						CASE seed_tr.object_id = object_tr.object_id
+						WHEN	TRUE
+						THEN	seed_tt.term_id
+						ELSE	NULL
+						END )
+					) + 100 * (
+					# indirect terms
+					CASE COUNT( DISTINCT
+						CASE seed_tr.object_id <> object_tr.object_id
+						WHEN	TRUE
+						THEN	seed_tt.term_id
+						ELSE	NULL
+						END )
+					WHEN	0
+					THEN	0
+					ELSE
+						COUNT( DISTINCT seed_tt.term_id )
+						- COUNT( DISTINCT
+						CASE seed_tr.object_id = object_tr.object_id
+						WHEN	TRUE
+						THEN	seed_tt.term_id
+						ELSE	NULL
+						END )
+					END
+					) as term_score,
+					
+					$seed_weight * (
+					# direct seeds
+					COUNT( DISTINCT
+						CASE seed_tr.object_id = object_tr.object_id
+						WHEN	TRUE
+						THEN	seed_tr.object_id
+						ELSE	NULL
+						END )
+					) + 100 * (
+					# indirect seeds
+					COUNT( DISTINCT
+						CASE seed_tr.object_id <> object_tr.object_id
+						WHEN	TRUE
+						THEN	seed_tr.object_id
+						ELSE	NULL
+						END )
+					) as seed_score,
+					
+					$path_weight * (
+					# direct paths
+					COUNT( DISTINCT
+						CASE seed_tr.object_id = object_tr.object_id
+						WHEN	TRUE
+						THEN	seed_tt.term_id
+						ELSE	NULL
+						END )
+					) + 100 * (
+					# indirect paths
+					COUNT( DISTINCT seed_tr.object_id, seed_tt.term_id )
+					- COUNT(
+						DISTINCT CASE seed_tr.object_id = object_tr.object_id
+						WHEN	TRUE
+						THEN	seed_tt.term_id
+						ELSE	NULL
+						END )
+					) as path_score
+					
+			# fetch object's terms
+			FROM	wp_term_relationships as object_tr
+			JOIN	wp_term_taxonomy as object_tt
+			ON		object_tt.term_taxonomy_id = object_tr.term_taxonomy_id
+			AND		object_tt.taxonomy IN ('$taxonomies')
+			
+			# join on terms, rather than taxonomies
+			JOIN	wp_term_taxonomy as object_term_tt
+			ON		object_term_tt.term_id = object_tt.term_id
+			AND		object_term_tt.taxonomy IN ('$taxonomies')
+			
+			# fetch seed objects: objects with at least one term in common with the object, including object
+			JOIN	wp_term_relationships as seed_tr
+			ON		seed_tr.term_taxonomy_id = object_term_tt.term_taxonomy_id
+			
+			# fetch seed object terms
+			JOIN wp_term_relationships as seed_term_tr
+			ON		seed_term_tr.object_id = seed_tr.object_id
+			JOIN	wp_term_taxonomy as seed_tt
+			ON		seed_tt.term_taxonomy_id = seed_term_tr.term_taxonomy_id
+			AND		seed_tt.taxonomy IN ('$taxonomies')
+			# filter out object's unique terms
+			AND		( seed_tr.object_id <> object_tr.object_id OR seed_tt.term_id = object_tt.term_id )
+			
+			# join on terms, rather than taxonomies
+			JOIN	wp_term_taxonomy as seed_term_tt
+			ON		seed_term_tt.term_id = seed_tt.term_id
+			AND		seed_term_tt.taxonomy IN ('$taxonomies')
+			
+			# fetch related objects: objects with at least one term in common with a seed
+			JOIN	wp_term_relationships as related_tr
+			ON		related_tr.term_taxonomy_id = seed_term_tt.term_taxonomy_id
+			# object is not related to itself
+			AND		related_tr.object_id <> object_tr.object_id
+			
+			# filter out seeds' unique terms
+			JOIN	wp_term_relationships as unique_filter_tr
+			ON		unique_filter_tr.term_taxonomy_id = related_tr.term_taxonomy_id
+			AND		unique_filter_tr.object_id <> related_tr.object_id
+			JOIN wp_term_taxonomy as unique_filter_tt
+			ON		unique_filter_tt.term_taxonomy_id = unique_filter_tr.term_taxonomy_id
+			AND		unique_filter_tt.taxonomy IN ('$taxonomies')
+			
+			# join on posts and applicable filters
+			$join_sql
+			
+			# seed the mess
+			WHERE	object_tr.object_id = $post_id
+			
+			# generate statistics
+			GROUP BY related_tr.object_id
+			
+			# order by relevance
+			ORDER BY term_score DESC, seed_score DESC, path_score DESC, related_post.post_title
+			
+			# limit
+			$limit_sql
+			";
+		
+		$wpdb->show_errors();
+#		$res = $wpdb->get_results($score_sql);
+#		$query = end($wpdb->queries);
+#		dump(
+#			$query,
+#			$res
+#			);
+		
+		return $score_sql;
+	} # get_score_sql()
+	
+	
+	/**
+	 * update()
+	 *
+	 * @param array $new_instance new widget options
+	 * @param array $old_instance old widget options
+	 * @return array $instance
+	 **/
 
-	#
-	# default_options()
-	#
+	function update($new_instance, $old_instance) {
+		$instance = related_widget::defaults();
+		
+		$instance['title'] = strip_tags($new_instance['title']);
+		$instance['amount'] = min(max(intval($new_instance['amount']), 5), 15);
+		$instance['desc'] = isset($new_instance['desc']);
+		
+		$type_filter = explode('-', $new_instance['type_filter']);
+		$type = array_shift($type_filter);
+		$filter = array_pop($type_filter);
+		$filter = intval($filter);
+		
+		$instance['type'] = in_array($type, array('posts', 'pages')) ? $type : 'posts';
+		$instance['filter'] = $filter ? $filter : false;
+		
+		related_widget::flush_cache();
+		
+		return $instance;
+	} # update()
+	
+	
+	/**
+	 * form()
+	 *
+	 * @param array $instance widget options
+	 * @return void
+	 **/
 
-	function default_options()
-	{
+	function form($instance) {
+		$instance = wp_parse_args($instance, related_widget::defaults());
+		static $pages;
+		static $categories;
+		
+		if ( !isset($pages) ) {
+			global $wpdb;
+			$pages = $wpdb->get_results("
+				SELECT	posts.*,
+						COALESCE(post_label.meta_value, post_title) as post_label
+				FROM	$wpdb->posts as posts
+				LEFT JOIN $wpdb->postmeta as post_label
+				ON		post_label.post_id = posts.ID
+				AND		post_label.meta_key = '_widgets_label'
+				WHERE	posts.post_type = 'page'
+				AND		posts.post_status = 'publish'
+				AND		posts.post_parent = 0
+				ORDER BY posts.menu_order, posts.post_title
+				");
+			update_post_cache($pages);
+		}
+		
+		if ( !isset($categories) ) {
+			$categories = get_terms('category', array('parent' => 0));
+		}
+		
+		extract($instance, EXTR_SKIP);
+		
+		echo '<p>'
+			. '<label>'
+			. __('Title:', 'related-widgets') . '<br />' . "\n"
+			. '<input type="text" size="20" name="' . $this->get_field_name('title') . '" class="widefat"'
+				. ' value="' . esc_attr($title) . '"'
+				. ' />'
+			. '</label>'
+			. '</p>' . "\n";
+		
+		echo '<p>'
+			. '<label>'
+			. __('Display:', 'related-widgets') . '<br />' . "\n"
+			. '<select name="' . $this->get_field_name('type_filter') . '" class="widefat">' . "\n";
+		
+		echo '<optgroup label="' . __('Posts', 'related-widgets') . '">' . "\n"
+			. '<option value="posts"' . selected($type == 'posts' && !$filter, true, false) . '>'
+			. __('Related Posts / All Categories', 'related-posts')
+			. '</option>' . "\n";
+		
+		foreach ( $categories as $category ) {
+			echo '<option value="posts-' . intval($category->term_id) . '"'
+					. selected($type == 'posts' && $filter == $category->term_id, true, false)
+					. '>'
+				. sprintf(__('Related Posts / %s', 'related-posts'), strip_tags($category->name))
+				. '</option>' . "\n";
+		}
+		
+		echo '</optgroup>' . "\n";
+		
+		echo '<optgroup label="' . __('Posts', 'related-widgets') . '">' . "\n"
+			. '<option value="pages"' . selected($type == 'pages' && !$filter, true, false) . '>'
+			. __('Related Pages / All Sections', 'related-posts')
+			. '</option>' . "\n";
+		
+		foreach ( $pages as $page ) {
+			echo '<option value="pages-' . intval($page->ID) . '"'
+					. selected($type == 'pages' && $filter == $page->ID, true, false)
+					. '>'
+				. sprintf(__('Related Pages / %s', 'related-posts'), strip_tags($page->post_label))
+				. '</option>' . "\n";
+		}
+		
+		echo '</optgroup>' . "\n";
+		
+		echo '</select>' . "\n"
+			. '</label>'
+			. '</p>' . "\n";
+		
+		echo '<p>'
+			. '<label>'
+			. sprintf(__('%s Related Items (5-15)', 'related-widgets'),
+				'<input type="text" size="3" name="' . $this->get_field_name('amount') . '"'
+					. ' value="' . intval($amount) . '"'
+					. ' />')
+			. '</label>'
+			. '</p>' . "\n";
+		
+		echo '<p>'
+			. '<label>'
+			. '<input type="checkbox" name="' . $this->get_field_name('desc') . '"'
+				. checked($desc, true, false)
+				. ' />'
+			. '&nbsp;'
+			. __('Show Descriptions', 'related-widgets')
+			. '</label>'
+			. '</p>' . "\n";
+	} # form()
+	
+	
+	/**
+	 * defaults()
+	 *
+	 * @return array $instance default options
+	 **/
+
+	function defaults() {
 		return array(
-			'title' => __('Related Posts'),
+			'title' => __('Related Posts', 'related-widgets'),
 			'type' => 'posts',
+			'filter' => false,
 			'amount' => 5,
-			'score' => false,
 			'desc' => false,
 			);
-	} # default_options()
+	} # defaults()
 	
 	
-	#
-	# extract_terms()
-	#
-	
-	function extract_terms($post_id)
-	{
+	/**
+	 * save_post()
+	 *
+	 * @param int $post_id
+	 * @return void
+	 **/
+
+	function save_post($post_id) {
 		$post = get_post($post_id);
 		
-		if ( $post->post_status = 'publish')
-		{
-			if ( !class_exists('extract_terms') )
-			{
-				include dirname(__FILE__) . '/extract-terms.php';
-			}
-			
-			$terms = extract_terms::get_post_terms($post);
-
-			if ( count($terms) > 2 )
-			{
-				$terms = array_slice($terms, 0, 2 + round(log(count($terms))));
-		 	}
+		if ( $post->post_type != 'page' )
+			return;
 		
-			if ( $terms )
-			{
-				wp_set_object_terms($post_id, $terms, 'yahoo_terms');
-			}
+		delete_transient('cached_section_ids');
+	} # save_post()
+	
+	
+	/**
+	 * cache_sections()
+	 *
+	 * @return void
+	 **/
 
-			delete_post_meta($post_id, '_related_widgets_got_yahoo_terms');
-			add_post_meta($post_id, '_related_widgets_got_yahoo_terms', '1', true);
+	function cache_sections() {
+		global $wpdb;
+		
+		$pages = $wpdb->get_results("
+			SELECT	*
+			FROM	$wpdb->posts
+			WHERE	post_type = 'page'
+			");
+		
+		update_post_cache($pages);
+		
+		foreach ( $pages as $page ) {
+			$parent = $page;
+			while ( $parent->post_parent )
+				$parent = get_post($parent->post_parent);
+			update_post_meta($page->ID, '_section_id', "$parent->ID");
 		}
-	} # extract_terms()
-} # related_widgets
+		
+		set_transient('cached_section_ids', 1);
+	} # cache_sections()
+	
+	
+	/**
+	 * flush_cache()
+	 *
+	 * @param mixed $in
+	 * @return mixed $in
+	 **/
 
-related_widgets::init();
+	function flush_cache($in = null) {
+		$cache_ids = array();
+		
+		$widgets = get_option("widget_related_widget");
+		
+		if ( !$widgets )
+			return $in;
+		unset($widgets['_multiwidget']);
+		
+		foreach ( array_keys($widgets) as $widget_id )
+			$cache_ids[] = "related_widget-$widget_id";
+		
+		foreach ( $cache_ids as $cache_id ) {
+			delete_post_meta_by_key("_$cache_id");
+		}
+		
+		return $in;
+	} # flush_cache()
+	
+	
+	/**
+	 * wp()
+	 *
+	 * @return void
+	 **/
+
+	function wp() {
+		global $wp_the_query;
+		foreach ( $wp_the_query->posts as $post ) {
+			$post_id = (int) $post->ID;
+			if ( get_post_meta($post_id, '_yterms', true) || wp_next_scheduled('get_yterms', array($post_id)) )
+			 	continue;
+			wp_schedule_single_event(time(), 'get_yterms', array($post_id));
+		}
+	} # wp()
+	
+	
+	/**
+	 * get_yterms()
+	 *
+	 * @return void
+	 **/
+
+	function get_yterms($post_id) {
+		$post_id = (int) $post_id;
+		
+		if ( get_post_meta($post_id, '_yterms', true) )
+			return;
+		
+		load_yterms();
+		yterms::get($post_id);
+		
+		related_widget::flush_cache();
+	} # get_yterms()
+} # related_widget
 
 
-if ( is_admin() )
-{
-	include dirname(__FILE__) . '/related-widgets-admin.php';
+if ( !function_exists('load_yterms') ) :
+function load_yterms() {
+	if ( !class_exists('yterms') )
+		include dirname(__FILE__) . '/yterms/yterms.php';
 }
+endif;
 ?>
