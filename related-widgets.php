@@ -184,9 +184,9 @@ class related_widget extends WP_Widget {
 		
 		foreach ( $posts as $post ) {
 			$label = get_post_meta($post->ID, '_widgets_label', true);
-			if ( $label === '' )
+			if ( (string) $label === '' )
 				$label = $post->post_title;
-			if ( $label === '' )
+			if ( (string) $label === '' )
 				$label = __('Untitled', 'related-widgets');
 			
 			echo '<li>'
