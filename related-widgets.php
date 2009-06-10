@@ -638,7 +638,9 @@ class related_widget extends WP_Widget {
 		echo '<p>'
 			. '<label>'
 			. __('Title:', 'related-widgets') . '<br />' . "\n"
-			. '<input type="text" size="20" name="' . $this->get_field_name('title') . '" class="widefat"'
+			. '<input type="text" size="20" class="widefat"'
+				. ' id="' . $this->get_field_id('title') . '"'
+				. ' name="' . $this->get_field_name('title') . '"'
 				. ' value="' . esc_attr($title) . '"'
 				. ' />'
 			. '</label>'
