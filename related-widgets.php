@@ -144,7 +144,15 @@ class related_widget extends WP_Widget {
 		extract($args, EXTR_SKIP);
 		extract($instance, EXTR_SKIP);
 		
-		if ( is_admin() || !in_array($type, array('pages', 'posts')) )
+		if ( is_admin() ) {
+			echo $before_widget
+				. ( $title
+					? ( $before_title . $title . $after_title )
+					: ''
+					)
+				. $after_widget;
+			return;
+		} elseif ( !in_array($type, array('pages', 'posts')) )
 			return;
 		
 		if ( is_singular() ) {
