@@ -6,7 +6,7 @@ Description: WordPress widgets that let you list related posts or pages. Require
 Version: 3.0 RC
 Author: Denis de Bernardy
 Author URI: http://www.getsemiologic.com
-Text Domain: related-widgets-info
+Text Domain: related-widgets
 Domain Path: /lang
 */
 
@@ -727,6 +727,18 @@ class related_widget extends WP_Widget {
 			'filter' => false,
 			'amount' => 5,
 			'desc' => false,
+			'widget_contexts' => array(
+				'home' => false,
+				'blog' => false,
+				'post' => true,
+				'page' => true,
+				'category' => false,
+				'tag' => false,
+				'author' => false,
+				'archive' => false,
+				'search' => false,
+				'404_error' => false,
+				),
 			);
 	} # defaults()
 	
