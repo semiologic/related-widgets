@@ -68,6 +68,27 @@ add_action('save_post', array('related_widget', 'save_post'));
 
 class related_widget extends WP_Widget {
 	/**
+	 * init()
+	 *
+	 * @return void
+	 **/
+
+	function init() {
+		if ( get_option('widget_related_widget') === false ) {
+			foreach ( array(
+				'related_widgets' => 'upgrade',
+				) as $ops => $method ) {
+				if ( get_option($ops) !== false ) {
+					$this->alt_option_name = $ops;
+					add_filter('option_' . $ops, array(get_class($this), $method));
+					break;
+				}
+			}
+		}
+	} # init()
+	
+	
+	/**
 	 * editor_init()
 	 *
 	 * @return void
@@ -128,6 +149,7 @@ class related_widget extends WP_Widget {
 			'width' => 330,
 			);
 		
+		$this->init();
 		$this->WP_Widget('related_widget', __('Related Widget', 'related-widgets'), $widget_ops, $control_ops);
 	} # related_widget()
 	
@@ -857,6 +879,47 @@ class related_widget extends WP_Widget {
 		
 		related_widget::flush_cache();
 	} # get_yterms()
+	
+	
+	/**
+	 * upgrade()
+	 *
+	 * @param array $ops
+	 * @return array $ops
+	 **/
+
+	function upgrade($ops) {
+		$widget_contexts = class_exists('widget_contexts')
+			? get_option('widget_contexts')
+			: false;
+		
+		foreach ( $ops as $k => $o ) {
+			if ( isset($widget_contexts['related-widget-' . $k]) ) {
+				$ops[$k]['widget_contexts'] = $widget_contexts['related-widget-' . $k];
+			}
+		}
+		
+		$sidebars_widgets = wp_get_sidebars_widgets(false);
+		$keys = array_keys($ops);
+		
+		foreach ( $sidebars_widgets as $sidebar => $widgets ) {
+			if ( !is_array($widgets) )
+				continue;
+			foreach ( $keys as $k ) {
+				$key = array_search("related-widget-$k", $widgets);
+				if ( $key !== false ) {
+					$sidebars_widgets[$sidebar][$key] = 'related_widget-' . $k;
+					unset($keys[array_search($k, $keys)]);
+				}
+			}
+		}
+		
+		wp_set_sidebars_widgets($sidebars_widgets);
+		global $_wp_sidebars_widgets;
+		$_wp_sidebars_widgets = array();
+		
+		return $ops;
+	} # upgrade()
 } # related_widget
 
 
