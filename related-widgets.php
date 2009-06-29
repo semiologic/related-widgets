@@ -203,12 +203,14 @@ class related_widget extends WP_Widget {
 			break;
 		}
 		
+		$title = apply_filters('widget_title', $title);
+		
 		ob_start();
 		
 		echo $before_widget;
 		
 		if ( $title )
-			echo $before_title . apply_filters('widget_title', $title) . $after_title;
+			echo $before_title . $title . $after_title;
 		
 		echo '<ul>' . "\n";
 		
@@ -899,7 +901,12 @@ class related_widget extends WP_Widget {
 			}
 		}
 		
+		global $wp_filter;
+		$filter_backup = isset($wp_filter['sidebars_widgets']) ? $wp_filter['sidebars_widgets'] : array();
+		unset($wp_filter['sidebars_widgets']);
 		$sidebars_widgets = wp_get_sidebars_widgets(false);
+		$wp_filter['sidebars_widgets'] = $filter_backup;
+		
 		$keys = array_keys($ops);
 		
 		foreach ( $sidebars_widgets as $sidebar => $widgets ) {
