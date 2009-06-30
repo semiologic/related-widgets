@@ -189,9 +189,13 @@ class related_widget extends WP_Widget {
 		$cache_id = "_$widget_id";
 		$o = get_post_meta($post_id, $cache_id, true);
 		
-		if ( !sem_widget_cache_debug && $o ) {
-			echo $o;
-			return;
+		if ( !sem_widget_cache_debug ) {
+			if ( $o ) {
+				echo $o;
+				return;
+			} elseif ( in_array($cache_id, get_post_custom_keys($post_id)) ) {
+				return;
+			}
 		}
 		
 		switch ( $type ) {
@@ -201,6 +205,11 @@ class related_widget extends WP_Widget {
 		case 'posts':
 			$posts = related_widget::get_posts($post_id, $instance);
 			break;
+		}
+		
+		if ( !$posts ) {
+			update_post_meta($post_id, $cache_id, '');
+			return;
 		}
 		
 		$title = apply_filters('widget_title', $title);
