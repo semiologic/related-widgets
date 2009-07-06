@@ -164,12 +164,13 @@ class related_widget extends WP_Widget {
 
 	function widget($args, $instance) {
 		extract($args, EXTR_SKIP);
+		$instance = wp_parse_args($instance, related_widget::defaults());
 		extract($instance, EXTR_SKIP);
 		
 		if ( is_admin() ) {
 			echo $before_widget
 				. ( $title
-					? ( $before_title . apply_filters('widget_title', $title) . $after_title )
+					? ( $before_title . $title . $after_title )
 					: ''
 					)
 				. $after_widget;
@@ -910,24 +911,14 @@ class related_widget extends WP_Widget {
 			}
 		}
 		
-		# todo: switch
-		global $wp_filter, $_wp_sidebars_widgets;
-		$filter_backup = isset($wp_filter['sidebars_widgets']) ? $wp_filter['sidebars_widgets'] : array();
-		unset($wp_filter['sidebars_widgets']);
-		$_wp_sidebars_widgets = array();
-		$sidebars_widgets = wp_get_sidebars_widgets(false);
-		$wp_filter['sidebars_widgets'] = $filter_backup;
-		$_wp_sidebars_widgets = array();
-		
-		#global $_wp_sidebars_widgets;
-		#if ( is_admin() ) {
-		#	$sidebars_widgets = get_option('sidebars_widgets', array());
-		#} else {
-		#	if ( !$_wp_sidebars_widgets )
-		#		wp_get_sidebars_widgets(false);
-		#	$sidebars_widgets =& $_wp_sidebars_widgets;
-		#}
-		# /todo
+		global $_wp_sidebars_widgets;
+		if ( is_admin() ) {
+			$sidebars_widgets = get_option('sidebars_widgets', array('array_version' => 3));
+		} else {
+			if ( !$_wp_sidebars_widgets )
+				$_wp_sidebars_widgets = get_option('sidebars_widgets', array('array_version' => 3));
+			$sidebars_widgets =& $_wp_sidebars_widgets;
+		}
 		
 		$keys = array_keys($ops);
 		
@@ -943,11 +934,8 @@ class related_widget extends WP_Widget {
 			}
 		}
 		
-		# todo: switch
-		wp_set_sidebars_widgets($sidebars_widgets);
-		#if ( is_admin() )
-		#	update_option('sidebars_widgets', $sidebars_widgets);
-		# /todo
+		if ( is_admin() )
+			update_option('sidebars_widgets', $sidebars_widgets);
 		
 		return $ops;
 	} # upgrade()
