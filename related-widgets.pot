@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: 3.0\n"
 "Report-Msgid-Bugs-To: https://tickets.semiologic.com\n"
-"POT-Creation-Date: 2009-06-02 15:37+0200\n"
+"POT-Creation-Date: 2009-07-07 23:05+0200\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -45,62 +45,66 @@ msgstr ""
 msgid "Choose from the most used tags in %s"
 msgstr ""
 
-#: related-widgets.php:100
+#: related-widgets.php:124
 msgid "Related Widgets"
 msgstr ""
 
-#: related-widgets.php:125
+#: related-widgets.php:149
 msgid "Related Posts or Pages, based on your tags."
 msgstr ""
 
-#: related-widgets.php:131
+#: related-widgets.php:156
 msgid "Related Widget"
 msgstr ""
 
-#: related-widgets.php:190
+#: related-widgets.php:236
 msgid "Untitled"
 msgstr ""
 
-#: related-widgets.php:640
+#: related-widgets.php:687
 msgid "Title:"
 msgstr ""
 
-#: related-widgets.php:649
+#: related-widgets.php:698
 msgid "Display:"
 msgstr ""
 
-#: related-widgets.php:652 related-widgets.php:667
+#: related-widgets.php:701
 msgid "Posts"
 msgstr ""
 
-#: related-widgets.php:654
+#: related-widgets.php:703
 msgid "Related Posts / All Categories"
 msgstr ""
 
-#: related-widgets.php:661
+#: related-widgets.php:710
 #, php-format
 msgid "Related Posts / %s"
 msgstr ""
 
-#: related-widgets.php:669
+#: related-widgets.php:716
+msgid "Pages"
+msgstr ""
+
+#: related-widgets.php:718
 msgid "Related Pages / All Sections"
 msgstr ""
 
-#: related-widgets.php:676
+#: related-widgets.php:725
 #, php-format
 msgid "Related Pages / %s"
 msgstr ""
 
-#: related-widgets.php:688
+#: related-widgets.php:737
 #, php-format
 msgid "%s Related Items"
 msgstr ""
 
-#: related-widgets.php:701
+#: related-widgets.php:750
 msgid "Show Descriptions"
 msgstr ""
 
-#: related-widgets.php:715
+#: related-widgets.php:764
 msgid "Related Posts"
 msgstr ""
 
