@@ -193,7 +193,7 @@ class related_widget extends WP_Widget {
 		$cache_id = "_$widget_id";
 		$o = get_post_meta($post_id, $cache_id, true);
 		
-		if ( !sem_widget_cache_debug ) {
+		if ( !sem_widget_cache_debug && !is_preview() ) {
 			if ( $o ) {
 				echo $o;
 				return;
@@ -212,7 +212,8 @@ class related_widget extends WP_Widget {
 		}
 		
 		if ( !$posts ) {
-			update_post_meta($post_id, $cache_id, '');
+			if ( !is_preview() )
+				update_post_meta($post_id, $cache_id, '');
 			return;
 		}
 		
@@ -256,7 +257,8 @@ class related_widget extends WP_Widget {
 		
 		$o = ob_get_clean();
 		
-		update_post_meta($post_id, $cache_id, $o);
+		if ( !is_preview() )
+			update_post_meta($post_id, $cache_id, $o);
 		
 		echo $o;
 	} # widget()
