@@ -55,6 +55,9 @@ foreach ( array(
 		'update_option_sem5_options',
 		'update_option_sem6_options',
 		'generate_rewrite_rules',
+		
+		'flush_cache',
+		'update_option_db_version',
 		) as $hook)
 	add_action($hook, array('related_widget', 'flush_cache'));
 
