@@ -20,7 +20,7 @@ http://www.mesoconcepts.com/license/
 **/
 
 
-load_plugin_textdomain('related-widgets', null, dirname(__FILE__) . '/lang');
+load_plugin_textdomain('related-widgets', false, dirname(plugin_basename(__FILE__)) . '/lang');
 
 if ( !defined('widget_utils_textdomain') )
 	define('widget_utils_textdomain', 'related-widgets');
@@ -57,7 +57,7 @@ foreach ( array(
 		'generate_rewrite_rules',
 		
 		'flush_cache',
-		'after_db_upgrade_version',
+		'after_db_upgrade',
 		) as $hook)
 	add_action($hook, array('related_widget', 'flush_cache'));
 
@@ -146,7 +146,7 @@ class related_widget extends WP_Widget {
 	function related_widget() {
 		$widget_ops = array(
 			'classname' => 'related_widget',
-			'description' => __("Related Posts or Pages, based on your tags.", 'related-widgets'),
+			'description' => __('Related Posts or Pages, based on your tags.', 'related-widgets'),
 			);
 		$control_ops = array(
 			'width' => 330,
