@@ -245,7 +245,7 @@ class related_widget extends WP_Widget {
 				if ( $desc ) {
 					$descr = trim(get_post_meta($post->ID, '_widgets_desc', true));
 					if ( $descr )
-						echo "\n\n" . wpautop($descr);
+						echo "\n\n" . wpautop(apply_filters('widget_text', $descr));
 				}
 				
 				echo '</li>' . "\n";
