@@ -427,7 +427,7 @@ class related_widget extends WP_Widget {
 		$seed_weight = 120;
 		$path_weight = 110;
 		
-		$noise_terms = 8;
+		$noise_terms = 12;
 		
 		if ( $join_sql ) {
 			$select_sql = "related_post.*";
@@ -597,6 +597,7 @@ class related_widget extends WP_Widget {
 			FROM	wp_term_relationships as object_tr
 			JOIN	wp_term_taxonomy as object_tt
 			ON		object_tt.term_taxonomy_id = object_tr.term_taxonomy_id
+			AND		object_tt.count <> 1
 			AND		object_tt.count <= $noise_terms
 			AND		object_tt.taxonomy = 'post_tag'
 			
@@ -609,8 +610,8 @@ class related_widget extends WP_Widget {
 			ON		seed_term_tr.object_id = seed_tr.object_id
 			JOIN	wp_term_taxonomy as seed_tt
 			ON		seed_tt.term_taxonomy_id = seed_term_tr.term_taxonomy_id
-			AND		object_tt.count > 1
-			AND		object_tt.count <= $noise_terms
+			AND		seed_tt.count <> 1
+			AND		seed_tt.count <= $noise_terms
 			AND		seed_tt.taxonomy = 'post_tag'
 			# filter out object's unique terms
 			AND		( seed_tr.object_id <> object_tr.object_id OR seed_tt.term_taxonomy_id = object_tt.term_taxonomy_id )
