@@ -66,7 +66,6 @@ register_deactivation_hook(__FILE__, array('related_widget', 'flush_cache'));
 
 add_action('save_post', array('related_widget', 'save_post'));
 
-delete_option('related_widgets_activated');
 if ( is_admin() && get_option('related_widgets_activated') === false )
 	related_widget::activate();
 
