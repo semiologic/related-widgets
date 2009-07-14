@@ -64,12 +64,57 @@ foreach ( array(
 register_activation_hook(__FILE__, array('related_widget', 'flush_cache'));
 register_deactivation_hook(__FILE__, array('related_widget', 'flush_cache'));
 
-add_action('wp', array('related_widget', 'wp'));
-add_action('get_yterms', array('related_widget', 'get_yterms'));
-
 add_action('save_post', array('related_widget', 'save_post'));
 
+delete_option('related_widgets_activated');
+if ( is_admin() && get_option('related_widgets_activated') === false )
+	related_widget::activate();
+
+wp_cache_add_non_persistent_groups(array('widget_queries'));
+
 class related_widget extends WP_Widget {
+	/**
+	 * activate()
+	 *
+	 * @return void
+	 **/
+
+	function activate() {
+		if ( get_option('related_widgets_activated') )
+			return;
+		
+		update_option('related_widgets_activated', 1);
+		
+		$ignore_user_abort = ignore_user_abort(true);
+		
+		if ( !function_exists('dbDelta') ) {
+			include ABSPATH . 'wp-admin/includes/upgrade.php';
+		}
+		
+		global $wpdb;
+		$charset_collate = '';
+		
+		if ( $wpdb->has_cap( 'collation' ) ) {
+			if ( ! empty($wpdb->charset) )
+				$charset_collate = "DEFAULT CHARACTER SET $wpdb->charset";
+			if ( ! empty($wpdb->collate) )
+				$charset_collate .= " COLLATE $wpdb->collate";
+		}
+		
+		dbDelta("
+		CREATE TABLE $wpdb->term_relationships (
+		 object_id bigint(20) unsigned NOT NULL default 0,
+		 term_taxonomy_id bigint(20) unsigned NOT NULL default 0,
+		 term_order int(11) NOT NULL default 0,
+		 PRIMARY KEY  (object_id,term_taxonomy_id),
+		 UNIQUE KEY reverse_pkey (term_taxonomy_id,object_id),
+		 KEY term_taxonomy_id (term_taxonomy_id)
+		) $charset_collate;");
+		
+		ignore_user_abort($ignore_user_abort);
+	} # activate()
+	
+	
 	/**
 	 * init()
 	 *
@@ -299,13 +344,19 @@ class related_widget extends WP_Widget {
 		
 		$score_sql = related_widget::get_score_sql($post_id, $join_sql, $amount);
 		
-		$posts = $wpdb->get_results($score_sql);
-		update_post_cache($posts);
+		$cache_id = md5($score_sql);
+		$posts = wp_cache_get($cache_id, 'widget_queries');
 		
-		$post_ids = array();
-		foreach ( $posts as $post )
-			$post_ids[] = $post->ID;
-		update_postmeta_cache($post_ids);
+		if ( $posts === false ) {
+			$posts = $wpdb->get_results($score_sql);
+			update_post_cache($posts);
+			wp_cache_add($cache_id, $posts, 'widget_queries');
+			
+			$post_ids = array();
+			foreach ( $posts as $post )
+				$post_ids[] = $post->ID;
+			update_postmeta_cache($post_ids);
+		}
 		
 		return $posts;
 	} # get_pages()
@@ -345,13 +396,19 @@ class related_widget extends WP_Widget {
 		
 		$score_sql = related_widget::get_score_sql($post_id, $join_sql, $amount);
 		
-		$posts = $wpdb->get_results($score_sql);
-		update_post_cache($posts);
+		$cache_id = md5($score_sql);
+		$posts = wp_cache_get($cache_id, 'widget_queries');
 		
-		$post_ids = array();
-		foreach ( $posts as $post )
-			$post_ids[] = $post->ID;
-		update_postmeta_cache($post_ids);
+		if ( $posts === false ) {
+			$posts = $wpdb->get_results($score_sql);
+			update_post_cache($posts);
+			wp_cache_add($cache_id, $posts, 'widget_queries');
+			
+			$post_ids = array();
+			foreach ( $posts as $post )
+				$post_ids[] = $post->ID;
+			update_postmeta_cache($post_ids);
+		}
 		
 		return $posts;
 	} # get_posts()
@@ -360,21 +417,17 @@ class related_widget extends WP_Widget {
 	/**
 	 * get_score_sql()
 	 *
-	 * @todo: create unique index object_id_term_taxonomy_id on wp_term_relationships ( term_taxonomy_id, object_id );
-	 *
 	 * @return string $str
 	 **/
 
 	function get_score_sql($post_id, $join_sql = '', $limit = '') {
 		global $wpdb;
 		
-		$taxonomies = apply_filters('related_widget_taxonomies', array('post_tag'));
-		$taxonomies = array_map(array(&$wpdb, 'escape'), $taxonomies);
-		$taxonomies = implode("', '", $taxonomies);
-		
 		$term_weight = 105;
 		$seed_weight = 120;
 		$path_weight = 110;
+		
+		$noise_terms = 8;
 		
 		if ( $join_sql ) {
 			$select_sql = "related_post.*";
@@ -385,7 +438,7 @@ class related_widget extends WP_Widget {
 			$select_sql = "related_post.post_title,
 					
 					# num_terms
-					COUNT( DISTINCT seed_tt.term_id )
+					COUNT( DISTINCT seed_tt.term_taxonomy_id )
 					as num_terms,
 				
 					# num_seeds
@@ -393,14 +446,14 @@ class related_widget extends WP_Widget {
 					as num_seeds,
 					
 					# num_paths
-					COUNT( DISTINCT seed_tr.object_id, seed_tt.term_id )
+					COUNT( DISTINCT seed_tr.object_id, seed_tt.term_taxonomy_id )
 					as num_path,
 					
 					# direct_terms
 					COUNT( DISTINCT
 						CASE seed_tr.object_id = object_tr.object_id
 						WHEN	TRUE
-						THEN	seed_tt.term_id
+						THEN	seed_tt.term_taxonomy_id
 						ELSE	NULL
 						END )
 					as direct_terms,
@@ -409,17 +462,17 @@ class related_widget extends WP_Widget {
 					CASE COUNT( DISTINCT
 						CASE seed_tr.object_id <> object_tr.object_id
 						WHEN	TRUE
-						THEN	seed_tt.term_id
+						THEN	seed_tt.term_taxonomy_id
 						ELSE	NULL
 						END )
 					WHEN	0
 					THEN	0
 					ELSE
-						COUNT( DISTINCT seed_tt.term_id )
+						COUNT( DISTINCT seed_tt.term_taxonomy_id )
 						- COUNT( DISTINCT
 						CASE seed_tr.object_id = object_tr.object_id
 						WHEN	TRUE
-						THEN	seed_tt.term_id
+						THEN	seed_tt.term_taxonomy_id
 						ELSE	NULL
 						END )
 					END
@@ -447,17 +500,17 @@ class related_widget extends WP_Widget {
 					COUNT( DISTINCT
 						CASE seed_tr.object_id = object_tr.object_id
 						WHEN	TRUE
-						THEN	seed_tt.term_id
+						THEN	seed_tt.term_taxonomy_id
 						ELSE	NULL
 						END )
 					as direct_paths,
 					
 					# indirect paths
-					COUNT( DISTINCT seed_tr.object_id, seed_tt.term_id )
+					COUNT( DISTINCT seed_tr.object_id, seed_tt.term_taxonomy_id )
 					- COUNT(
 						DISTINCT CASE seed_tr.object_id = object_tr.object_id
 						WHEN	TRUE
-						THEN	seed_tt.term_id
+						THEN	seed_tt.term_taxonomy_id
 						ELSE	NULL
 						END )
 					as indirect_paths";
@@ -479,7 +532,7 @@ class related_widget extends WP_Widget {
 					COUNT( DISTINCT
 						CASE seed_tr.object_id = object_tr.object_id
 						WHEN	TRUE
-						THEN	seed_tt.term_id
+						THEN	seed_tt.term_taxonomy_id
 						ELSE	NULL
 						END )
 					) + 100 * (
@@ -487,17 +540,17 @@ class related_widget extends WP_Widget {
 					CASE COUNT( DISTINCT
 						CASE seed_tr.object_id <> object_tr.object_id
 						WHEN	TRUE
-						THEN	seed_tt.term_id
+						THEN	seed_tt.term_taxonomy_id
 						ELSE	NULL
 						END )
 					WHEN	0
 					THEN	0
 					ELSE
-						COUNT( DISTINCT seed_tt.term_id )
+						COUNT( DISTINCT seed_tt.term_taxonomy_id )
 						- COUNT( DISTINCT
 						CASE seed_tr.object_id = object_tr.object_id
 						WHEN	TRUE
-						THEN	seed_tt.term_id
+						THEN	seed_tt.term_taxonomy_id
 						ELSE	NULL
 						END )
 					END
@@ -526,16 +579,16 @@ class related_widget extends WP_Widget {
 					COUNT( DISTINCT
 						CASE seed_tr.object_id = object_tr.object_id
 						WHEN	TRUE
-						THEN	seed_tt.term_id
+						THEN	seed_tt.term_taxonomy_id
 						ELSE	NULL
 						END )
 					) + 100 * (
 					# indirect paths
-					COUNT( DISTINCT seed_tr.object_id, seed_tt.term_id )
+					COUNT( DISTINCT seed_tr.object_id, seed_tt.term_taxonomy_id )
 					- COUNT(
 						DISTINCT CASE seed_tr.object_id = object_tr.object_id
 						WHEN	TRUE
-						THEN	seed_tt.term_id
+						THEN	seed_tt.term_taxonomy_id
 						ELSE	NULL
 						END )
 					) as path_score
@@ -544,44 +597,29 @@ class related_widget extends WP_Widget {
 			FROM	wp_term_relationships as object_tr
 			JOIN	wp_term_taxonomy as object_tt
 			ON		object_tt.term_taxonomy_id = object_tr.term_taxonomy_id
-			AND		object_tt.taxonomy IN ('$taxonomies')
-			
-			# join on terms, rather than taxonomies
-			JOIN	wp_term_taxonomy as object_term_tt
-			ON		object_term_tt.term_id = object_tt.term_id
-			AND		object_term_tt.taxonomy IN ('$taxonomies')
+			AND		object_tt.count <= $noise_terms
+			AND		object_tt.taxonomy = 'post_tag'
 			
 			# fetch seed objects: objects with at least one term in common with the object, including object
 			JOIN	wp_term_relationships as seed_tr
-			ON		seed_tr.term_taxonomy_id = object_term_tt.term_taxonomy_id
+			ON		seed_tr.term_taxonomy_id = object_tt.term_taxonomy_id
 			
 			# fetch seed object terms
 			JOIN wp_term_relationships as seed_term_tr
 			ON		seed_term_tr.object_id = seed_tr.object_id
 			JOIN	wp_term_taxonomy as seed_tt
 			ON		seed_tt.term_taxonomy_id = seed_term_tr.term_taxonomy_id
-			AND		seed_tt.taxonomy IN ('$taxonomies')
+			AND		object_tt.count > 1
+			AND		object_tt.count <= $noise_terms
+			AND		seed_tt.taxonomy = 'post_tag'
 			# filter out object's unique terms
-			AND		( seed_tr.object_id <> object_tr.object_id OR seed_tt.term_id = object_tt.term_id )
-			
-			# join on terms, rather than taxonomies
-			JOIN	wp_term_taxonomy as seed_term_tt
-			ON		seed_term_tt.term_id = seed_tt.term_id
-			AND		seed_term_tt.taxonomy IN ('$taxonomies')
+			AND		( seed_tr.object_id <> object_tr.object_id OR seed_tt.term_taxonomy_id = object_tt.term_taxonomy_id )
 			
 			# fetch related objects: objects with at least one term in common with a seed
 			JOIN	wp_term_relationships as related_tr
-			ON		related_tr.term_taxonomy_id = seed_term_tt.term_taxonomy_id
+			ON		related_tr.term_taxonomy_id = seed_tt.term_taxonomy_id
 			# object is not related to itself
 			AND		related_tr.object_id <> object_tr.object_id
-			
-			# filter out seeds' unique terms
-			JOIN	wp_term_relationships as unique_filter_tr
-			ON		unique_filter_tr.term_taxonomy_id = related_tr.term_taxonomy_id
-			AND		unique_filter_tr.object_id <> related_tr.object_id
-			JOIN wp_term_taxonomy as unique_filter_tt
-			ON		unique_filter_tt.term_taxonomy_id = unique_filter_tr.term_taxonomy_id
-			AND		unique_filter_tt.taxonomy IN ('$taxonomies')
 			
 			# join on posts and applicable filters
 			$join_sql
@@ -849,7 +887,9 @@ class related_widget extends WP_Widget {
 		
 		if ( !$widgets )
 			return $in;
+		
 		unset($widgets['_multiwidget']);
+		unset($widgets['number']);
 		
 		foreach ( array_keys($widgets) as $widget_id )
 			$cache_ids[] = "related_widget-$widget_id";
@@ -860,42 +900,6 @@ class related_widget extends WP_Widget {
 		
 		return $in;
 	} # flush_cache()
-	
-	
-	/**
-	 * wp()
-	 *
-	 * @return void
-	 **/
-
-	function wp() {
-		global $wp_the_query;
-		foreach ( $wp_the_query->posts as $post ) {
-			$post_id = (int) $post->ID;
-			if ( get_post_meta($post_id, '_yterms', true) || wp_next_scheduled('get_yterms', array($post_id)) )
-			 	continue;
-			wp_schedule_single_event(time(), 'get_yterms', array($post_id));
-		}
-	} # wp()
-	
-	
-	/**
-	 * get_yterms()
-	 *
-	 * @return void
-	 **/
-
-	function get_yterms($post_id) {
-		$post_id = (int) $post_id;
-		
-		if ( get_post_meta($post_id, '_yterms', true) )
-			return;
-		
-		load_yterms();
-		yterms::get($post_id);
-		
-		related_widget::flush_cache();
-	} # get_yterms()
 	
 	
 	/**
@@ -945,12 +949,4 @@ class related_widget extends WP_Widget {
 		return $ops;
 	} # upgrade()
 } # related_widget
-
-
-if ( !function_exists('load_yterms') ) :
-function load_yterms() {
-	if ( !class_exists('yterms') )
-		include dirname(__FILE__) . '/yterms/yterms.php';
-}
-endif;
 ?>
