@@ -609,7 +609,6 @@ class related_widget extends WP_Widget {
 			ON		seed_term_tr.object_id = seed_tr.object_id
 			JOIN	wp_term_taxonomy as seed_tt
 			ON		seed_tt.term_taxonomy_id = seed_term_tr.term_taxonomy_id
-			AND		seed_tt.count <> 1
 			AND		seed_tt.count <= $noise_terms
 			AND		seed_tt.taxonomy = 'post_tag'
 			# filter out object's unique terms
@@ -636,6 +635,9 @@ class related_widget extends WP_Widget {
 			
 			# generate statistics
 			GROUP BY related_tr.object_id
+			
+			# strip out unique tags
+			HAVING	COUNT(DISTINCT seed_tt.term_taxonomy_id, related_tr.object_id) > 1
 			
 			# order by relevance
 			ORDER BY term_score DESC, seed_score DESC, path_score DESC, related_post.post_title
