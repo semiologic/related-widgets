@@ -38,39 +38,6 @@ if ( !defined('sem_widget_cache_debug') )
  * @package Related Widgets
  **/
 
-add_action('widgets_init', array('related_widget', 'widgets_init'));
-
-foreach ( array('post.php', 'post-new.php', 'page.php', 'page-new.php') as $hook )
-	add_action('load-' . $hook, array('related_widget', 'editor_init'));
-
-foreach ( array(
-		'save_post',
-		'delete_post',
-		'switch_theme',
-		'update_option_active_plugins',
-		'update_option_show_on_front',
-		'update_option_page_on_front',
-		'update_option_page_for_posts',
-		'update_option_sidebars_widgets',
-		'update_option_sem5_options',
-		'update_option_sem6_options',
-		'generate_rewrite_rules',
-		
-		'flush_cache',
-		'after_db_upgrade',
-		) as $hook)
-	add_action($hook, array('related_widget', 'flush_cache'));
-
-register_activation_hook(__FILE__, array('related_widget', 'flush_cache'));
-register_deactivation_hook(__FILE__, array('related_widget', 'flush_cache'));
-
-add_action('save_post', array('related_widget', 'save_post'));
-
-if ( is_admin() && get_option('related_widgets_activated') === false )
-	related_widget::activate();
-
-wp_cache_add_non_persistent_groups(array('widget_queries'));
-
 class related_widget extends WP_Widget {
 	/**
 	 * activate()
@@ -951,4 +918,37 @@ class related_widget extends WP_Widget {
 		return $ops;
 	} # upgrade()
 } # related_widget
+
+add_action('widgets_init', array('related_widget', 'widgets_init'));
+
+foreach ( array('post.php', 'post-new.php', 'page.php', 'page-new.php') as $hook )
+	add_action('load-' . $hook, array('related_widget', 'editor_init'));
+
+foreach ( array(
+		'save_post',
+		'delete_post',
+		'switch_theme',
+		'update_option_active_plugins',
+		'update_option_show_on_front',
+		'update_option_page_on_front',
+		'update_option_page_for_posts',
+		'update_option_sidebars_widgets',
+		'update_option_sem5_options',
+		'update_option_sem6_options',
+		'generate_rewrite_rules',
+		
+		'flush_cache',
+		'after_db_upgrade',
+		) as $hook)
+	add_action($hook, array('related_widget', 'flush_cache'));
+
+register_activation_hook(__FILE__, array('related_widget', 'flush_cache'));
+register_deactivation_hook(__FILE__, array('related_widget', 'flush_cache'));
+
+add_action('save_post', array('related_widget', 'save_post'));
+
+if ( is_admin() && get_option('related_widgets_activated') === false )
+	related_widget::activate();
+
+wp_cache_add_non_persistent_groups(array('widget_queries'));
 ?>
