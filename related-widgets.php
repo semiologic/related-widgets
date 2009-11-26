@@ -3,7 +3,7 @@
 Plugin Name: Related Widgets
 Plugin URI: http://www.semiologic.com/software/related-widgets/
 Description: WordPress widgets that let you list related posts or pages, based on their tags.
-Version: 3.0.2 beta
+Version: 3.0.2 beta2
 Author: Denis de Bernardy
 Author URI: http://www.getsemiologic.com
 Text Domain: related-widgets
@@ -560,21 +560,21 @@ class related_widget extends WP_Widget {
 					) as path_score
 					
 			# fetch object's terms
-			FROM	wp_term_relationships as object_tr
-			JOIN	wp_term_taxonomy as object_tt
+			FROM	$wpdb->term_relationships as object_tr
+			JOIN	$wpdb->term_taxonomy as object_tt
 			ON		object_tt.term_taxonomy_id = object_tr.term_taxonomy_id
 			AND		object_tt.count <> 1
 			AND		object_tt.count <= $noise_terms
 			AND		object_tt.taxonomy = 'post_tag'
 			
 			# fetch seed objects: objects with at least one term in common with the object, including object
-			JOIN	wp_term_relationships as seed_tr
+			JOIN	$wpdb->term_relationships as seed_tr
 			ON		seed_tr.term_taxonomy_id = object_tt.term_taxonomy_id
 			
 			# fetch seed object terms
-			JOIN wp_term_relationships as seed_term_tr
+			JOIN	$wpdb->term_relationships as seed_term_tr
 			ON		seed_term_tr.object_id = seed_tr.object_id
-			JOIN	wp_term_taxonomy as seed_tt
+			JOIN	$wpdb->term_taxonomy as seed_tt
 			ON		seed_tt.term_taxonomy_id = seed_term_tr.term_taxonomy_id
 			AND		seed_tt.count <= $noise_terms
 			AND		seed_tt.taxonomy = 'post_tag'
@@ -582,7 +582,7 @@ class related_widget extends WP_Widget {
 			AND		( seed_tr.object_id <> object_tr.object_id OR seed_tt.term_taxonomy_id = object_tt.term_taxonomy_id )
 			
 			# fetch related objects: objects with at least one term in common with a seed
-			JOIN	wp_term_relationships as related_tr
+			JOIN	$wpdb->term_relationships as related_tr
 			ON		related_tr.term_taxonomy_id = seed_tt.term_taxonomy_id
 			# object is not related to itself
 			AND		related_tr.object_id <> object_tr.object_id

@@ -49,6 +49,7 @@ The [Semiologic forum](http://forum.semiologic.com) is the best place to report 
 = 3.0.2 =
 
 - WP 2.9 compat
+- Fix hard-coded DB tables
 
 = 3.0.1 =
 
