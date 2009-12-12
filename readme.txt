@@ -46,6 +46,11 @@ The [Semiologic forum](http://forum.semiologic.com) is the best place to report 
 
 == Change Log ==
 
+= 3.0.3 =
+
+- Slight algorithm improvement
+- Improve caching and memcached support
+
 = 3.0.2 =
 
 - WP 2.9 compat

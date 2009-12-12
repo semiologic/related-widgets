@@ -3,7 +3,7 @@
 Plugin Name: Related Widgets
 Plugin URI: http://www.semiologic.com/software/related-widgets/
 Description: WordPress widgets that let you list related posts or pages, based on their tags.
-Version: 3.0.2
+Version: 3.0.3 alpha
 Author: Denis de Bernardy
 Author URI: http://www.getsemiologic.com
 Text Domain: related-widgets
@@ -68,14 +68,14 @@ class related_widget extends WP_Widget {
 		}
 		
 		dbDelta("
-		CREATE TABLE $wpdb->term_relationships (
-		 object_id bigint(20) unsigned NOT NULL default 0,
-		 term_taxonomy_id bigint(20) unsigned NOT NULL default 0,
-		 term_order int(11) NOT NULL default 0,
-		 PRIMARY KEY  (object_id,term_taxonomy_id),
-		 UNIQUE KEY reverse_pkey (term_taxonomy_id,object_id),
-		 KEY term_taxonomy_id (term_taxonomy_id)
-		) $charset_collate;");
+CREATE TABLE $wpdb->term_relationships (
+ object_id bigint(20) unsigned NOT NULL default 0,
+ term_taxonomy_id bigint(20) unsigned NOT NULL default 0,
+ term_order int(11) NOT NULL default 0,
+ PRIMARY KEY  (object_id,term_taxonomy_id),
+ UNIQUE KEY reverse_pkey (term_taxonomy_id,object_id),
+ KEY term_taxonomy_id (term_taxonomy_id)
+) $charset_collate;");
 		
 		ignore_user_abort($ignore_user_abort);
 	} # activate()
@@ -201,14 +201,20 @@ class related_widget extends WP_Widget {
 			return;
 		}
 		
+		global $_wp_using_ext_object_cache;
 		$cache_id = "_$widget_id";
-		$o = get_post_meta($post_id, $cache_id, true);
+		if ( $_wp_using_ext_object_cache )
+			$o = wp_cache_get($post_id, $widget_id);
+		else
+			$o = get_post_meta($post_id, $cache_id, true);
 		
 		if ( !sem_widget_cache_debug && !is_preview() ) {
 			if ( $o ) {
 				echo $o;
 				return;
-			} elseif ( in_array($cache_id, (array) get_post_custom_keys($post_id)) ) {
+			} elseif ( $_wp_using_ext_object_cache && $o !== false ) {
+				return;
+			} elseif ( !$_wp_using_ext_object_cache && in_array($cache_id, (array) get_post_custom_keys($post_id)) ) {
 				return;
 			}
 		}
@@ -223,8 +229,12 @@ class related_widget extends WP_Widget {
 		}
 		
 		if ( !$posts ) {
-			if ( !is_preview() )
-				update_post_meta($post_id, $cache_id, '');
+			if ( !is_preview() ) {
+				if ( $_wp_using_ext_object_cache )
+					wp_cache_set($post_id, $o, $widget_id);
+				else
+					update_post_meta($post_id, $cache_id, $o);
+			}
 			return;
 		}
 		
@@ -268,8 +278,12 @@ class related_widget extends WP_Widget {
 		
 		$o = ob_get_clean();
 		
-		if ( !is_preview() )
-			update_post_meta($post_id, $cache_id, $o);
+		if ( !is_preview() ) {
+			if ( $_wp_using_ext_object_cache )
+				wp_cache_set($post_id, $o, $widget_id);
+			else
+				update_post_meta($post_id, $cache_id, $o);
+		}
 		
 		echo $o;
 	} # widget()
@@ -563,7 +577,6 @@ class related_widget extends WP_Widget {
 			FROM	$wpdb->term_relationships as object_tr
 			JOIN	$wpdb->term_taxonomy as object_tt
 			ON		object_tt.term_taxonomy_id = object_tr.term_taxonomy_id
-			AND		object_tt.count <> 1
 			AND		object_tt.count <= $noise_terms
 			AND		object_tt.taxonomy = 'post_tag'
 			
@@ -604,7 +617,7 @@ class related_widget extends WP_Widget {
 			GROUP BY related_tr.object_id
 			
 			# strip out unique tags
-			HAVING	COUNT(DISTINCT seed_tt.term_taxonomy_id, related_tr.object_id) > 1
+			HAVING	COUNT(DISTINCT seed_term_tr.object_id, related_tr.object_id) > 1
 			
 			# order by relevance
 			ORDER BY term_score DESC, seed_score DESC, path_score DESC, related_post.post_title
@@ -797,12 +810,48 @@ class related_widget extends WP_Widget {
 	 **/
 
 	function save_post($post_id) {
+		if ( !get_transient('cached_section_ids') )
+			return;
+		
+		$post_id = (int) $post_id;
 		$post = get_post($post_id);
 		
 		if ( $post->post_type != 'page' )
 			return;
 		
-		delete_transient('cached_section_ids');
+		$section_id = get_post_meta($post_id, '_section_id', true);
+		$refresh = false;
+		if ( !$section_id ) {
+			$refresh = true;
+		} else {
+			_get_post_ancestors($post);
+			if ( !$post->ancestors ) {
+				if ( $section_id != $post_id )
+					$refresh = true;
+			} elseif ( $section_id != $post->ancestors[0] ) {
+				$refresh = true;
+			}
+		}
+		
+		if ( $refresh ) {
+			global $wpdb;
+			if ( !$post->post_parent )
+				$new_section_id = $post_id;
+			else
+				$new_section_id = get_post_meta($post->post_parent, '_section_id', true);
+			
+			if ( $new_section_id ) {
+				update_post_meta($post_id, '_section_id', $new_section_id);
+				wp_cache_delete($post_id, 'posts');
+				
+				# mass-process children
+				if ( $wpdb->get_var("SELECT ID FROM $wpdb->posts WHERE post_parent = $post_id AND post_type = 'page' LIMIT 1") )
+					delete_transient('cached_section_ids');
+			} else {
+				# fix corrupt data
+				delete_transient('cached_section_ids');
+			}
+		}
 	} # save_post()
 	
 	
@@ -832,7 +881,7 @@ class related_widget extends WP_Widget {
 		
 		foreach ( $pages as $page ) {
 			$parent = $page;
-			while ( $parent->post_parent )
+			while ( $parent->post_parent && $parent->ID != $parent->post_parent )
 				$parent = get_post($parent->post_parent);
 			
 			if ( "$parent->ID" !== get_post_meta($page->ID, '_section_id', true) )
@@ -844,6 +893,108 @@ class related_widget extends WP_Widget {
 	
 	
 	/**
+	 * pre_flush_post()
+	 *
+	 * @param int $post_id
+	 * @return void
+	 **/
+
+	function pre_flush_post($post_id) {
+		$post_id = (int) $post_id;
+		if ( !$post_id )
+			return;
+		
+		$post = get_post($post_id);
+		if ( !$post || wp_is_post_revision($post_id) )
+			return;
+		
+		if ( wp_cache_get($post_id, 'pre_flush_post') !== false )
+			return;
+		
+		$old = array(
+			'post_title' => $post->post_title,
+			'post_name' => $post->post_name,
+			'post_date' => $post->post_date,
+			'post_excerpt' => $post->post_excerpt,
+			'post_content' => $post->post_content,
+			'permalink' => get_permalink($post_id),
+			);
+		
+		foreach ( array(
+			'widgets_label', 'widgets_desc',
+			'widgets_exclude', 'widgets_exception',
+			) as $key ) {
+			$old[$key] = get_post_meta($post_id, "_$key", true);
+		}
+		
+		foreach ( array('category', 'post_tag') as $taxonomy ) {
+			$terms = wp_get_object_terms($post_id, $taxonomy);
+			$old[$taxonomy] = array();
+			foreach ( $terms as &$term )
+				$old[$taxonomy][] = $term->term_id;
+		}
+		
+		wp_cache_add($post_id, $old, 'pre_flush_post');
+	} # pre_flush_post()
+	
+	
+	/**
+	 * flush_post()
+	 *
+	 * @param int $post_id
+	 * @return void
+	 **/
+
+	function flush_post($post_id) {
+		$post_id = (int) $post_id;
+		if ( !$post_id )
+			return;
+		
+		$post = get_post($post_id);
+		if ( !$post || wp_is_post_revision($post_id) )
+			return;
+		
+		$old = wp_cache_get($post_id, 'pre_flush_post');
+		if ( $old === false )
+			return related_widget::flush_cache();
+		
+		extract($old, EXTR_SKIP);
+		foreach ( array_keys($old) as $key ) {
+			switch ( $key ) {
+			case 'widgets_label':
+			case 'widgets_desc':
+			case 'widgets_exclude':
+				if ( $$key != get_post_meta($post_id, "_$key", true) )
+					return related_widget::flush_cache();
+				break;
+			
+			case 'permalink':
+				if ( $$key != get_permalink($post_id) )
+					return related_widget::flush_cache();
+				break;
+			
+			case 'post_tag':
+				$terms = wp_get_object_terms($post_id, $key);
+				$term_ids = array();
+				foreach ( $terms as &$term )
+					$term_ids[] = $term->term_id;
+				if ( $term_ids != $$key )
+					return related_widget::flush_cache();
+				break;
+			
+			case 'post_title':
+				if ( $$key != $post->$key )
+					return related_widget::flush_cache();
+			}
+		}
+		
+		# prevent mass-flushing when rewrite rules have not changed
+		if ( $post->post_type == 'page' )
+			remove_action('generate_rewrite_rules', array('related_widget', 'flush_cache'));
+	} # flush_post()
+	
+	
+	/**
 	 * flush_cache()
 	 *
 	 * @param mixed $in
@@ -851,9 +1002,14 @@ class related_widget extends WP_Widget {
 	 **/
 
 	function flush_cache($in = null) {
-		$cache_ids = array();
+		static $done = false;
+		if ( $done )
+			return $in;
 		
-		$widgets = get_option("widget_related_widget");
+		$done = true;
+		$option_name = 'related_widget';
+		
+		$widgets = get_option("widget_$option_name");
 		
 		if ( !$widgets )
 			return $in;
@@ -861,11 +1017,35 @@ class related_widget extends WP_Widget {
 		unset($widgets['_multiwidget']);
 		unset($widgets['number']);
 		
-		foreach ( array_keys($widgets) as $widget_id )
-			$cache_ids[] = "related_widget-$widget_id";
+		if ( !$widgets )
+			return $in;
 		
-		foreach ( $cache_ids as $cache_id ) {
+		$cache_ids = array();
+		
+		global $_wp_using_ext_object_cache;
+		foreach ( array_keys($widgets) as $widget_id ) {
+			$cache_id = "$option_name-$widget_id";
 			delete_post_meta_by_key("_$cache_id");
+			if ( $_wp_using_ext_object_cache )
+				$cache_ids[] = $cache_id;
+		}
+		
+		if ( $cache_ids ) {
+			$post_ids = wp_cache_get('post_ids', 'widget_queries');
+			if ( $post_ids === false ) {
+				global $wpdb;
+				$post_ids = $wpdb->get_col("
+					SELECT	ID
+					FROM	$wpdb->posts
+					WHERE	post_type <> 'revision'
+					AND		post_status <> 'trash'
+					");
+				wp_cache_set('post_ids', $post_ids, 'widget_queries');
+			}
+			foreach ( $cache_ids as $cache_id ) {
+				foreach ( $post_ids as $post_id )
+					wp_cache_delete($post_id, $cache_id);
+			}
 		}
 		
 		return $in;
@@ -925,8 +1105,6 @@ foreach ( array('post.php', 'post-new.php', 'page.php', 'page-new.php') as $hook
 	add_action('load-' . $hook, array('related_widget', 'editor_init'));
 
 foreach ( array(
-		'save_post',
-		'delete_post',
 		'switch_theme',
 		'update_option_active_plugins',
 		'update_option_show_on_front',
@@ -939,8 +1117,16 @@ foreach ( array(
 		
 		'flush_cache',
 		'after_db_upgrade',
-		) as $hook)
+		) as $hook )
 	add_action($hook, array('related_widget', 'flush_cache'));
+
+add_action('pre_post_update', array('related_widget', 'pre_flush_post'));
+
+foreach ( array(
+		'save_post',
+		'delete_post',
+		) as $hook )
+	add_action($hook, array('related_widget', 'flush_post'), 1); // before _save_post_hook()
 
 register_activation_hook(__FILE__, array('related_widget', 'flush_cache'));
 register_deactivation_hook(__FILE__, array('related_widget', 'flush_cache'));
@@ -950,5 +1136,5 @@ add_action('save_post', array('related_widget', 'save_post'));
 if ( is_admin() && get_option('related_widgets_activated') === false )
 	related_widget::activate();
 
-wp_cache_add_non_persistent_groups(array('widget_queries'));
+wp_cache_add_non_persistent_groups(array('widget_queries', 'pre_flush_post'));
 ?>
