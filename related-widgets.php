@@ -956,7 +956,15 @@ CREATE TABLE $wpdb->term_relationships (
 		if ( !$post || wp_is_post_revision($post_id) )
 			return;
 		
+		# prevent mass-flushing when rewrite rules have not changed
+		if ( $post->post_type == 'page' )
+			remove_action('generate_rewrite_rules', array('related_widget', 'flush_cache'));
+		
 		$old = wp_cache_get($post_id, 'pre_flush_post');
+		
+		if ( $post->post_status != 'publish' && ( !$old || $old['post_status'] != 'publish' ) )
+			return;
+		
 		if ( $old === false )
 			return related_widget::flush_cache();
 		
@@ -990,10 +998,6 @@ CREATE TABLE $wpdb->term_relationships (
 					return related_widget::flush_cache();
 			}
 		}
-		
-		# prevent mass-flushing when rewrite rules have not changed
-		if ( $post->post_type == 'page' )
-			remove_action('generate_rewrite_rules', array('related_widget', 'flush_cache'));
 	} # flush_post()
 	
 	
