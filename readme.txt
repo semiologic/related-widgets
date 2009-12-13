@@ -50,6 +50,7 @@ The [Semiologic forum](http://forum.semiologic.com) is the best place to report 
 
 - Slight algorithm improvement
 - Improve caching and memcached support
+- Apply filters to permalinks
 
 = 3.0.2 =
 
