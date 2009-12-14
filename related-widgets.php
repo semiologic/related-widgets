@@ -942,8 +942,10 @@ CREATE TABLE $wpdb->term_relationships (
 			if ( !isset($o[$taxonomy]) ) {
 				$terms = wp_get_object_terms($post_id, $taxonomy);
 				$old[$taxonomy] = array();
-				foreach ( $terms as &$term )
-					$old[$taxonomy][] = $term->term_id;
+				if ( !is_wp_error($terms) ) {
+					foreach ( $terms as &$term )
+						$old[$taxonomy][] = $term->term_id;
+				}
 				$update = true;
 			}
 		}
@@ -999,8 +1001,10 @@ CREATE TABLE $wpdb->term_relationships (
 			case 'post_tag':
 				$terms = wp_get_object_terms($post_id, $key);
 				$term_ids = array();
-				foreach ( $terms as &$term )
-					$term_ids[] = $term->term_id;
+				if ( !is_wp_error($terms) ) {
+					foreach ( $terms as &$term )
+						$term_ids[] = $term->term_id;
+				}
 				if ( $term_ids != $$key )
 					return related_widget::flush_cache();
 				break;
