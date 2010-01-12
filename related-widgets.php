@@ -3,7 +3,7 @@
 Plugin Name: Related Widgets
 Plugin URI: http://www.semiologic.com/software/related-widgets/
 Description: WordPress widgets that let you list related posts or pages, based on their tags.
-Version: 3.0.3
+Version: 3.0.4 RC
 Author: Denis de Bernardy
 Author URI: http://www.getsemiologic.com
 Text Domain: related-widgets
@@ -943,7 +943,7 @@ CREATE TABLE $wpdb->term_relationships (
 				$terms = wp_get_object_terms($post_id, $taxonomy);
 				$old[$taxonomy] = array();
 				if ( !is_wp_error($terms) ) {
-					foreach ( $terms as &$term )
+					foreach ( $terms as $term )
 						$old[$taxonomy][] = $term->term_id;
 				}
 				$update = true;
@@ -1002,7 +1002,7 @@ CREATE TABLE $wpdb->term_relationships (
 				$terms = wp_get_object_terms($post_id, $key);
 				$term_ids = array();
 				if ( !is_wp_error($terms) ) {
-					foreach ( $terms as &$term )
+					foreach ( $terms as $term )
 						$term_ids[] = $term->term_id;
 				}
 				if ( $term_ids != $$key )
