@@ -49,6 +49,7 @@ The [Semiologic forum](http://forum.semiologic.com) is the best place to report 
 = 3.0.4 =
 
 - Remove php5-specific code
+- Further cache improvements (fix priority)
 
 = 3.0.3 =
 
