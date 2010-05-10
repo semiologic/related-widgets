@@ -868,7 +868,7 @@ CREATE TABLE $wpdb->term_relationships (
 			SELECT	*
 			FROM	$wpdb->posts
 			WHERE	post_type = 'page'
-			AND		post_status <> 'trash'
+			AND		post_status IN ( 'publish', 'private' )
 			");
 		
 		update_post_cache($pages);
@@ -1062,7 +1062,7 @@ CREATE TABLE $wpdb->term_relationships (
 					SELECT	ID
 					FROM	$wpdb->posts
 					WHERE	post_type <> 'revision'
-					AND		post_status <> 'trash'
+					AND		post_status IN ( 'publish', 'private' )
 					");
 				wp_cache_set('post_ids', $post_ids, 'widget_queries');
 			}
