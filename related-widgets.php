@@ -3,7 +3,7 @@
 Plugin Name: Related Widgets
 Plugin URI: http://www.semiologic.com/software/related-widgets/
 Description: WordPress widgets that let you list related posts or pages, based on their tags.
-Version: 3.0.5
+Version: 3.1
 Author: Denis de Bernardy
 Author URI: http://www.getsemiologic.com
 Text Domain: related-widgets
@@ -45,7 +45,7 @@ class related_widget extends WP_Widget {
 	 * @return void
 	 **/
 
-	function activate() {
+	static function activate() {
 		if ( get_option('related_widgets_activated') )
 			return;
 		
@@ -392,13 +392,16 @@ CREATE TABLE $wpdb->term_relationships (
 		
 		return $posts;
 	} # get_posts()
-	
-	
-	/**
-	 * get_score_sql()
-	 *
-	 * @return string $str
-	 **/
+
+
+    /**
+     * get_score_sql()
+     *
+     * @param $post_id
+     * @param string $join_sql
+     * @param string $limit
+     * @return string $str
+     */
 
 	function get_score_sql($post_id, $join_sql = '', $limit = '') {
 		global $wpdb;
@@ -824,11 +827,11 @@ CREATE TABLE $wpdb->term_relationships (
 		if ( !$section_id ) {
 			$refresh = true;
 		} else {
-			_get_post_ancestors($post);
-			if ( !$post->ancestors ) {
+            $ancestors = get_post_ancestors($post);
+			if ( empty($ancestors) ) {
 				if ( $section_id != $post_id )
 					$refresh = true;
-			} elseif ( $section_id != $post->ancestors[0] ) {
+			} elseif ( $section_id != $ancestors[count($ancestors)-1] ) {
 				$refresh = true;
 			}
 		}
@@ -960,7 +963,7 @@ CREATE TABLE $wpdb->term_relationships (
 	 * flush_post()
 	 *
 	 * @param int $post_id
-	 * @return void
+	 * @return void|mixed
 	 **/
 
 	function flush_post($post_id) {

@@ -1,0 +1,6 @@
+[submodule "widget-utils"]
+	path = widget-utils
+	url = ssh://git@roundtopsolutions.com/home/git/semiologic/lib/widget-utils
+[submodule "page-tags"]
+	path = page-tags
+	url = ssh://git@roundtopsolutions.com/home/git/semiologic/lib/page-tags
