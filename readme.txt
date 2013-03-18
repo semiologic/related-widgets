@@ -1,9 +1,9 @@
 === Related Widgets ===
-Contributors: Denis-de-Bernardy & Mike Koepke
+Contributors: Denis-de-Bernardy & Mike_Koepke
 Donate link: http://www.semiologic.com/partners/
 Tags: semiologic
 Requires at least: 3.1
-Tested up to: 3.5
+Tested up to: 3.5.1
 Stable tag: trunk
 
 A collection of widgets to list related posts and pages.
