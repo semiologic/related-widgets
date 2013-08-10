@@ -3,7 +3,7 @@
 Plugin Name: Related Widgets
 Plugin URI: http://www.semiologic.com/software/related-widgets/
 Description: WordPress widgets that let you list related posts or pages, based on their tags.
-Version: 3.1.1
+Version: 3.2
 Author: Denis de Bernardy
 Author URI: http://www.getsemiologic.com
 Text Domain: related-widgets
@@ -39,13 +39,73 @@ if ( !defined('sem_widget_cache_debug') )
  **/
 
 class related_widget extends WP_Widget {
+    /**
+   	 * related_widget()
+   	 *
+   	 * @return void
+   	 **/
+
+   	function related_widget() {
+        add_action('widgets_init', array($this, 'widgets_init'));
+
+        foreach ( array('post.php', 'post-new.php', 'page.php', 'page-new.php') as $hook )
+        	add_action('load-' . $hook, array($this, 'editor_init'));
+
+        foreach ( array(
+        		'switch_theme',
+        		'update_option_active_plugins',
+        		'update_option_show_on_front',
+        		'update_option_page_on_front',
+        		'update_option_page_for_posts',
+        		'update_option_sidebars_widgets',
+        		'update_option_sem5_options',
+        		'update_option_sem6_options',
+        		'generate_rewrite_rules',
+                'clean_post_cache',
+                'clean_page_cache',
+        		'flush_cache',
+        		'after_db_upgrade',
+        		) as $hook )
+        	add_action($hook, array($this, 'flush_cache'));
+
+        add_action('pre_post_update', array($this, 'pre_flush_post'));
+
+        foreach ( array(
+        		'save_post',
+        		'delete_post',
+        		) as $hook )
+        	add_action($hook, array($this, 'flush_post'), 1); // before _save_post_hook()
+
+        register_activation_hook(__FILE__, array($this, 'flush_cache'));
+        register_deactivation_hook(__FILE__, array($this, 'flush_cache'));
+
+        add_action('save_post', array($this, 'save_post'));
+
+        if ( is_admin() && get_option('related_widgets_activated') === false )
+        	related_widget::activate();
+
+        wp_cache_add_non_persistent_groups(array($this, 'pre_flush_post'));
+
+   		$widget_ops = array(
+   			'classname' => 'related_widget',
+   			'description' => __('Related Posts or Pages, based on your tags.', 'related-widgets'),
+   			);
+   		$control_ops = array(
+   			'width' => 330,
+   			);
+
+   		$this->init();
+   		$this->WP_Widget('related_widget', __('Related Widget', 'related-widgets'), $widget_ops, $control_ops);
+   	} # related_widget()
+
+
 	/**
 	 * activate()
 	 *
 	 * @return void
 	 **/
 
-	static function activate() {
+	function activate() {
 		if ( get_option('related_widgets_activated') )
 			return;
 		
@@ -114,8 +174,8 @@ CREATE TABLE $wpdb->term_relationships (
 		
 		widget_utils::post_meta_boxes();
 		widget_utils::page_meta_boxes();
-		add_action('post_widget_config_affected', array('related_widget', 'widget_config_affected'));
-		add_action('page_widget_config_affected', array('related_widget', 'widget_config_affected'));
+		add_action('post_widget_config_affected', array($this, 'widget_config_affected'));
+		add_action('page_widget_config_affected', array($this, 'widget_config_affected'));
 		
 		if ( !class_exists('page_tags') )
 			include dirname(__FILE__) . '/page-tags/page-tags.php';
@@ -147,27 +207,7 @@ CREATE TABLE $wpdb->term_relationships (
 		register_widget('related_widget');
 	} # widgets_init()
 	
-	
-	/**
-	 * related_widget()
-	 *
-	 * @return void
-	 **/
 
-	function related_widget() {
-		$widget_ops = array(
-			'classname' => 'related_widget',
-			'description' => __('Related Posts or Pages, based on your tags.', 'related-widgets'),
-			);
-		$control_ops = array(
-			'width' => 330,
-			);
-		
-		$this->init();
-		$this->WP_Widget('related_widget', __('Related Widget', 'related-widgets'), $widget_ops, $control_ops);
-	} # related_widget()
-	
-	
 	/**
 	 * widget()
 	 *
@@ -972,7 +1012,7 @@ CREATE TABLE $wpdb->term_relationships (
 			return;
 		
 		# prevent mass-flushing when the permalink structure hasn't changed
-		remove_action('generate_rewrite_rules', array('related_widget', 'flush_cache'));
+		remove_action('generate_rewrite_rules', array($this, 'flush_cache'));
 		
 		$post = get_post($post_id);
 		if ( !$post || wp_is_post_revision($post_id) )
@@ -1126,43 +1166,6 @@ CREATE TABLE $wpdb->term_relationships (
 	} # upgrade()
 } # related_widget
 
-add_action('widgets_init', array('related_widget', 'widgets_init'));
+$related_widget = new related_widget();
 
-foreach ( array('post.php', 'post-new.php', 'page.php', 'page-new.php') as $hook )
-	add_action('load-' . $hook, array('related_widget', 'editor_init'));
-
-foreach ( array(
-		'switch_theme',
-		'update_option_active_plugins',
-		'update_option_show_on_front',
-		'update_option_page_on_front',
-		'update_option_page_for_posts',
-		'update_option_sidebars_widgets',
-		'update_option_sem5_options',
-		'update_option_sem6_options',
-		'generate_rewrite_rules',
-        'clean_post_cache',
-        'clean_page_cache',
-		'flush_cache',
-		'after_db_upgrade',
-		) as $hook )
-	add_action($hook, array('related_widget', 'flush_cache'));
-
-add_action('pre_post_update', array('related_widget', 'pre_flush_post'));
-
-foreach ( array(
-		'save_post',
-		'delete_post',
-		) as $hook )
-	add_action($hook, array('related_widget', 'flush_post'), 1); // before _save_post_hook()
-
-register_activation_hook(__FILE__, array('related_widget', 'flush_cache'));
-register_deactivation_hook(__FILE__, array('related_widget', 'flush_cache'));
-
-add_action('save_post', array('related_widget', 'save_post'));
-
-if ( is_admin() && get_option('related_widgets_activated') === false )
-	related_widget::activate();
-
-wp_cache_add_non_persistent_groups(array('widget_queries', 'pre_flush_post'));
 ?>

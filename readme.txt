@@ -3,7 +3,7 @@ Contributors: Denis-de-Bernardy & Mike_Koepke
 Donate link: http://www.semiologic.com/partners/
 Tags: semiologic
 Requires at least: 3.1
-Tested up to: 3.5.1
+Tested up to: 3.6
 Stable tag: trunk
 
 A collection of widgets to list related posts and pages.
@@ -44,6 +44,11 @@ The [Semiologic forum](http://forum.semiologic.com) is the best place to report 
 2. Activate the plugin through the 'Plugins' menu in WordPress
 
 == Change Log ==
+
+= 3.2 =
+
+- WP 3.6 compat
+- PHP 5.4 compact
 
 = 3.1.1 =
 
