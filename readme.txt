@@ -45,6 +45,10 @@ The [Semiologic forum](http://forum.semiologic.com) is the best place to report 
 
 == Change Log ==
 
+= 3.2.1 =
+
+- Fix PHP Warning 'Object of class related_widget could not be converted to string' in /wp-content/plugins/sem-cache/object-cache.php on line 133
+
 = 3.2 =
 
 - WP 3.6 compat

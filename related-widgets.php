@@ -3,8 +3,8 @@
 Plugin Name: Related Widgets
 Plugin URI: http://www.semiologic.com/software/related-widgets/
 Description: WordPress widgets that let you list related posts or pages, based on their tags.
-Version: 3.2
-Author: Denis de Bernardy
+Version: 3.2.1
+Author: Denis de Bernardy & Mike Koepke
 Author URI: http://www.getsemiologic.com
 Text Domain: related-widgets
 Domain Path: /lang
@@ -35,6 +35,7 @@ if ( !defined('sem_widget_cache_debug') )
 /**
  * related_widget
  *
+ * @property int|string alt_option_name
  * @package Related Widgets
  **/
 
@@ -84,7 +85,7 @@ class related_widget extends WP_Widget {
         if ( is_admin() && get_option('related_widgets_activated') === false )
         	related_widget::activate();
 
-        wp_cache_add_non_persistent_groups(array($this, 'pre_flush_post'));
+	    wp_cache_add_non_persistent_groups(array('related_widget', 'pre_flush_post'));
 
    		$widget_ops = array(
    			'classname' => 'related_widget',
