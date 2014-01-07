@@ -3,20 +3,19 @@
 Plugin Name: Related Widgets
 Plugin URI: http://www.semiologic.com/software/related-widgets/
 Description: WordPress widgets that let you list related posts or pages, based on their tags.
-Version: 3.2.1
+Version: 3.3
 Author: Denis de Bernardy & Mike Koepke
 Author URI: http://www.getsemiologic.com
 Text Domain: related-widgets
 Domain Path: /lang
+License: Dual licensed under the MIT and GPLv2 licenses
 */
 
 /*
 Terms of use
 ------------
 
-This software is copyright Mesoconcepts and is distributed under the terms of the Mesoconcepts license. In a nutshell, you may freely use it for any purpose, but may not redistribute it without written permission.
-
-http://www.mesoconcepts.com/license/
+This software is copyright Denis de Bernardy & Mike Koepke, and is distributed under the terms of the MIT and GPLv2 licenses.
 **/
 
 
@@ -46,7 +45,7 @@ class related_widget extends WP_Widget {
    	 * @return void
    	 **/
 
-   	function related_widget() {
+	public function __construct() {
         add_action('widgets_init', array($this, 'widgets_init'));
 
         foreach ( array('post.php', 'post-new.php', 'page.php', 'page-new.php') as $hook )
@@ -244,7 +243,7 @@ CREATE TABLE $wpdb->term_relationships (
 		
 		global $_wp_using_ext_object_cache;
 		$cache_id = "_$widget_id";
-		if ( $_wp_using_ext_object_cache )
+		if ( $_wp_using_ext_object_cache === true )
 			$o = wp_cache_get($post_id, $widget_id);
 		else
 			$o = get_post_meta($post_id, $cache_id, true);
@@ -255,7 +254,7 @@ CREATE TABLE $wpdb->term_relationships (
 				return;
 			} elseif ( $_wp_using_ext_object_cache && $o !== false ) {
 				return;
-			} elseif ( !$_wp_using_ext_object_cache && in_array($cache_id, (array) get_post_custom_keys($post_id)) ) {
+			} elseif ( $_wp_using_ext_object_cache === false && in_array($cache_id, (array) get_post_custom_keys($post_id)) ) {
 				return;
 			}
 		}
@@ -854,15 +853,20 @@ CREATE TABLE $wpdb->term_relationships (
 	 **/
 
 	function save_post($post_id) {
-		if ( !get_transient('cached_section_ids') )
+		if ( !get_transient('cached_section_ids') || wp_is_post_revision($post_id) || !current_user_can('edit_post', $post_id) )
 			return;
 		
 		$post_id = (int) $post_id;
 		$post = get_post($post_id);
 		
-		if ( $post->post_type != 'page' )
+		if ( $post->post_type != 'page' || $post->post_status != 'publish' || $post->post_status != 'trash' )
 			return;
-		
+
+		if ( $post->post_status == 'trash' ) {
+			delete_transient('cached_section_ids');
+			return;
+		}
+
 		$section_id = get_post_meta($post_id, '_section_id', true);
 		$refresh = false;
 		if ( !$section_id ) {
@@ -893,6 +897,8 @@ CREATE TABLE $wpdb->term_relationships (
 					delete_transient('cached_section_ids');
 			} else {
 				# fix corrupt data
+				if ( $section_id )
+					delete_post_meta($post_id, '_section_id');
 				delete_transient('cached_section_ids');
 			}
 		}
@@ -1168,5 +1174,3 @@ CREATE TABLE $wpdb->term_relationships (
 } # related_widget
 
 $related_widget = new related_widget();
-
-?>
