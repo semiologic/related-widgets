@@ -3,7 +3,7 @@
 Plugin Name: Related Widgets
 Plugin URI: http://www.semiologic.com/software/related-widgets/
 Description: WordPress widgets that let you list related posts or pages, based on their tags.
-Version: 3.3
+Version: 3.3.1
 Author: Denis de Bernardy & Mike Koepke
 Author URI: http://www.getsemiologic.com
 Text Domain: related-widgets
@@ -79,7 +79,7 @@ class related_widget extends WP_Widget {
         register_activation_hook(__FILE__, array($this, 'flush_cache'));
         register_deactivation_hook(__FILE__, array($this, 'flush_cache'));
 
-        add_action('save_post', array($this, 'save_post'));
+        add_action('save_post', array($this, 'save_post'), 15);
 
         if ( is_admin() && get_option('related_widgets_activated') === false )
         	related_widget::activate();
@@ -853,13 +853,15 @@ CREATE TABLE $wpdb->term_relationships (
 	 **/
 
 	function save_post($post_id) {
-		if ( !get_transient('cached_section_ids') || wp_is_post_revision($post_id) || !current_user_can('edit_post', $post_id) )
+		if ( isset($GLOBALS['sem_id_cache']) || wp_is_post_revision($post_id) || !current_user_can('edit_post', $post_id) )
 			return;
 		
+		$GLOBALS['sem_id_cache'] = true;
+
 		$post_id = (int) $post_id;
 		$post = get_post($post_id);
 		
-		if ( $post->post_type != 'page' || $post->post_status != 'publish' || $post->post_status != 'trash' )
+		if ( $post->post_type != 'page' || ( $post->post_status != 'publish' && $post->post_status != 'trash' ) )
 			return;
 
 		if ( $post->post_status == 'trash' ) {
