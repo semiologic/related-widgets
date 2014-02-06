@@ -45,7 +45,7 @@ The [Semiologic forum](http://forum.semiologic.com) is the best place to report 
 
 == Change Log ==
 
-= 2.3.1 =
+= 3.3.1 =
 
 - Further tweaks around the widget context caching
 
