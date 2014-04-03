@@ -3,7 +3,7 @@
 Plugin Name: Related Widgets
 Plugin URI: http://www.semiologic.com/software/related-widgets/
 Description: WordPress widgets that let you list related posts or pages, based on their tags.
-Version: 3.3.1
+Version: 3.4 dev
 Author: Denis de Bernardy & Mike Koepke
 Author URI: http://www.getsemiologic.com
 Text Domain: related-widgets
@@ -18,8 +18,6 @@ Terms of use
 This software is copyright Denis de Bernardy & Mike Koepke, and is distributed under the terms of the MIT and GPLv2 licenses.
 **/
 
-
-load_plugin_textdomain('related-widgets', false, dirname(plugin_basename(__FILE__)) . '/lang');
 
 if ( !defined('widget_utils_textdomain') )
 	define('widget_utils_textdomain', 'related-widgets');
@@ -39,54 +37,75 @@ if ( !defined('sem_widget_cache_debug') )
  **/
 
 class related_widget extends WP_Widget {
-    /**
-   	 * related_widget()
-   	 *
-   	 * @return void
-   	 **/
+
+	/**
+	 * Plugin instance.
+	 *
+	 * @see get_instance()
+	 * @type object
+	 */
+	protected static $instance = NULL;
+
+	/**
+	 * URL to this plugin's directory.
+	 *
+	 * @type string
+	 */
+	public $plugin_url = '';
+
+	/**
+	 * Path to this plugin's directory.
+	 *
+	 * @type string
+	 */
+	public $plugin_path = '';
+
+	/**
+	 * Access this plugin’s working instance
+	 *
+	 * @wp-hook plugins_loaded
+	 * @return  object of this class
+	 */
+	public static function get_instance()
+	{
+		NULL === self::$instance and self::$instance = new self;
+
+		return self::$instance;
+	}
+
+	/**
+	 * Loads translation file.
+	 *
+	 * Accessible to other classes to load different language files (admin and
+	 * front-end for example).
+	 *
+	 * @wp-hook init
+	 * @param   string $domain
+	 * @return  void
+	 */
+	public function load_language( $domain )
+	{
+		load_plugin_textdomain(
+			$domain,
+			FALSE,
+			$this->plugin_path . 'lang'
+		);
+	}
+
+	/**
+	 * Constructor.
+	 *
+	 *
+	 */
 
 	public function __construct() {
-        add_action('widgets_init', array($this, 'widgets_init'));
+		$this->plugin_url    = plugins_url( '/', __FILE__ );
+		$this->plugin_path   = plugin_dir_path( __FILE__ );
+		$this->load_language( 'related-widgets' );
 
-        foreach ( array('post.php', 'post-new.php', 'page.php', 'page-new.php') as $hook )
-        	add_action('load-' . $hook, array($this, 'editor_init'));
+		add_action( 'plugins_loaded', array ( $this, 'init' ) );
 
-        foreach ( array(
-        		'switch_theme',
-        		'update_option_active_plugins',
-        		'update_option_show_on_front',
-        		'update_option_page_on_front',
-        		'update_option_page_for_posts',
-        		'update_option_sidebars_widgets',
-        		'update_option_sem5_options',
-        		'update_option_sem6_options',
-        		'generate_rewrite_rules',
-                'clean_post_cache',
-                'clean_page_cache',
-        		'flush_cache',
-        		'after_db_upgrade',
-        		) as $hook )
-        	add_action($hook, array($this, 'flush_cache'));
-
-        add_action('pre_post_update', array($this, 'pre_flush_post'));
-
-        foreach ( array(
-        		'save_post',
-        		'delete_post',
-        		) as $hook )
-        	add_action($hook, array($this, 'flush_post'), 1); // before _save_post_hook()
-
-        register_activation_hook(__FILE__, array($this, 'flush_cache'));
-        register_deactivation_hook(__FILE__, array($this, 'flush_cache'));
-
-        add_action('save_post', array($this, 'save_post'), 15);
-
-        if ( is_admin() && get_option('related_widgets_activated') === false )
-        	related_widget::activate();
-
-	    wp_cache_add_non_persistent_groups(array('related_widget', 'pre_flush_post'));
-
-   		$widget_ops = array(
+		$widget_ops = array(
    			'classname' => 'related_widget',
    			'description' => __('Related Posts or Pages, based on your tags.', 'related-widgets'),
    			);
@@ -94,9 +113,71 @@ class related_widget extends WP_Widget {
    			'width' => 330,
    			);
 
-   		$this->init();
    		$this->WP_Widget('related_widget', __('Related Widget', 'related-widgets'), $widget_ops, $control_ops);
    	} # related_widget()
+
+
+	/**
+	 * init()
+	 *
+	 * @return void
+	 **/
+
+	function init() {
+		if ( get_option('widget_related_widget') === false ) {
+			foreach ( array(
+				'related_widgets' => 'upgrade',
+				) as $ops => $method ) {
+				if ( get_option($ops) !== false ) {
+					$this->alt_option_name = $ops;
+					add_filter('option_' . $ops, array(get_class($this), $method));
+					break;
+				}
+			}
+		}
+
+		add_action('widgets_init', array($this, 'widgets_init'));
+
+		foreach ( array(
+		    'switch_theme',
+		    'update_option_active_plugins',
+		    'update_option_show_on_front',
+		    'update_option_page_on_front',
+		    'update_option_page_for_posts',
+		    'update_option_sidebars_widgets',
+		    'update_option_sem5_options',
+		    'update_option_sem6_options',
+		    'generate_rewrite_rules',
+	        'clean_post_cache',
+	        'clean_page_cache',
+		    'flush_cache',
+		    'after_db_upgrade',
+		    ) as $hook )
+			add_action($hook, array($this, 'flush_cache'));
+
+		register_activation_hook(__FILE__, array($this, 'flush_cache'));
+		register_deactivation_hook(__FILE__, array($this, 'flush_cache'));
+
+		if ( is_admin() ) {
+			foreach ( array(
+			    'save_post',
+			    'delete_post',
+			    ) as $hook )
+				add_action($hook, array($this, 'flush_post'), 1); // before _save_post_hook()
+
+			add_action('save_post', array($this, 'save_post'), 15);
+
+			add_action('pre_post_update', array($this, 'pre_flush_post'));
+
+			if ( get_option('related_widgets_activated') === false )
+				related_widget::activate();
+
+			foreach ( array('post.php', 'post-new.php', 'page.php', 'page-new.php') as $hook )
+				add_action('load-' . $hook, array($this, 'editor_init'));
+		}
+
+		wp_cache_add_non_persistent_groups(array('related_widget', 'pre_flush_post'));
+	} # init()
 
 
 	/**
@@ -139,28 +220,7 @@ CREATE TABLE $wpdb->term_relationships (
 		
 		ignore_user_abort($ignore_user_abort);
 	} # activate()
-	
-	
-	/**
-	 * init()
-	 *
-	 * @return void
-	 **/
 
-	function init() {
-		if ( get_option('widget_related_widget') === false ) {
-			foreach ( array(
-				'related_widgets' => 'upgrade',
-				) as $ops => $method ) {
-				if ( get_option($ops) !== false ) {
-					$this->alt_option_name = $ops;
-					add_filter('option_' . $ops, array(get_class($this), $method));
-					break;
-				}
-			}
-		}
-	} # init()
-	
 	
 	/**
 	 * editor_init()
@@ -170,7 +230,7 @@ CREATE TABLE $wpdb->term_relationships (
 
 	function editor_init() {
 		if ( !class_exists('widget_utils') )
-			include dirname(__FILE__) . '/widget-utils/widget-utils.php';
+			include $this->plugin_path . '/widget-utils/widget-utils.php';
 		
 		widget_utils::post_meta_boxes();
 		widget_utils::page_meta_boxes();
@@ -178,7 +238,7 @@ CREATE TABLE $wpdb->term_relationships (
 		add_action('page_widget_config_affected', array($this, 'widget_config_affected'));
 		
 		if ( !class_exists('page_tags') )
-			include dirname(__FILE__) . '/page-tags/page-tags.php';
+			include $this->plugin_path . '/page-tags/page-tags.php';
 		
 		page_tags::meta_boxes();
 	} # editor_init()
@@ -1175,4 +1235,4 @@ CREATE TABLE $wpdb->term_relationships (
 	} # upgrade()
 } # related_widget
 
-$related_widget = new related_widget();
+$related_widget = related_widget::get_instance();

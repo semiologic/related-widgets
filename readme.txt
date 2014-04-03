@@ -45,6 +45,10 @@ The [Semiologic forum](http://forum.semiologic.com) is the best place to report 
 
 == Change Log ==
 
+= 3.4 =
+
+- Code refactoring
+
 = 3.3.1 =
 
 - Further tweaks around the widget context caching
