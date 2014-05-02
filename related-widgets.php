@@ -152,6 +152,8 @@ class related_widget extends WP_Widget {
 	        'clean_page_cache',
 		    'flush_cache',
 		    'after_db_upgrade',
+			'wp_upgrade',
+			'wp_upgrade'
 		    ) as $hook )
 			add_action($hook, array($this, 'flush_cache'));
 
