@@ -3,7 +3,7 @@
 Plugin Name: Related Widgets
 Plugin URI: http://www.semiologic.com/software/related-widgets/
 Description: WordPress widgets that let you list related posts or pages, based on their tags.
-Version: 3.4 dev
+Version: 3.4
 Author: Denis de Bernardy & Mike Koepke
 Author URI: http://www.getsemiologic.com
 Text Domain: related-widgets
@@ -88,7 +88,7 @@ class related_widget extends WP_Widget {
 		load_plugin_textdomain(
 			$domain,
 			FALSE,
-			$this->plugin_path . 'lang'
+			dirname(plugin_basename(__FILE__)) . '/lang'
 		);
 	}
 
@@ -300,15 +300,26 @@ CREATE TABLE $wpdb->term_relationships (
 		} else {
 			return;
 		}
-		
+
+		$use_caching = true;
+		global $wp_version;
+		if ( version_compare( $wp_version, '3.9', '>=' ) )
+			if ( $this->is_preview() )
+				$use_caching = false;
+
+		$o = '';
+
 		global $_wp_using_ext_object_cache;
 		$cache_id = "_$widget_id";
-		if ( $_wp_using_ext_object_cache === true )
-			$o = wp_cache_get($post_id, $widget_id);
-		else
-			$o = get_post_meta($post_id, $cache_id, true);
-		
-		if ( !sem_widget_cache_debug && !is_preview() ) {
+
+		if ( $use_caching ) {
+			if ( $_wp_using_ext_object_cache === true )
+				$o = wp_cache_get($post_id, $widget_id);
+			else
+				$o = get_post_meta($post_id, $cache_id, true);
+		}
+
+		if ( !sem_widget_cache_debug && !is_preview() && $use_caching ) {
 			if ( $o ) {
 				echo $o;
 				return;
@@ -329,7 +340,7 @@ CREATE TABLE $wpdb->term_relationships (
 		}
 		
 		if ( !$posts ) {
-			if ( !is_preview() ) {
+			if ( !is_preview() && $use_caching  ) {
 				if ( $_wp_using_ext_object_cache )
 					wp_cache_set($post_id, $o, $widget_id);
 				else
@@ -378,7 +389,7 @@ CREATE TABLE $wpdb->term_relationships (
 		
 		$o = ob_get_clean();
 		
-		if ( !is_preview() ) {
+		if ( !is_preview() && $use_caching ) {
 			if ( $_wp_using_ext_object_cache )
 				wp_cache_set($post_id, $o, $widget_id);
 			else

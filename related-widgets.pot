@@ -1,116 +1,116 @@
-# Related Widgets pot file.
-# Copyright (C) 2009 Mesoconcepts <http://www.mesoconcepts.com>
+# Copyright (C) 2014 Related Widgets
 # This file is distributed under the same license as the Related Widgets package.
-# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
-#
-#, fuzzy
 msgid ""
 msgstr ""
-"Project-Id-Version: 3.0.3\n"
-"Report-Msgid-Bugs-To: https://tickets.semiologic.com\n"
-"POT-Creation-Date: 2009-12-12 19:34+0100\n"
-"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Project-Id-Version: Related Widgets 3.4 dev\n"
+"Report-Msgid-Bugs-To: http://wordpress.org/support/plugin/related-widgets\n"
+"POT-Creation-Date: 2014-05-02 15:08:55+00:00\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"PO-Revision-Date: 2014-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
-"MIME-Version: 1.0\n"
-"Content-Type: text/plain; charset=CHARSET\n"
-"Content-Transfer-Encoding: 8bit\n"
 
-#: page-tags/page-tags.php:28
+#: page-tags/page-tags.php:51
 msgid "Tags used on this page:"
 msgstr ""
 
-#: page-tags/page-tags.php:29
+#: page-tags/page-tags.php:52 page-tags/page-tags.php:102
 msgid "Add new tag"
 msgstr ""
 
-#: page-tags/page-tags.php:46
+#: page-tags/page-tags.php:70
 msgid "Tags"
 msgstr ""
 
-#: page-tags/page-tags.php:49
+#: page-tags/page-tags.php:73
 msgid "Autotag"
 msgstr ""
 
-#: page-tags/page-tags.php:68
+#: page-tags/page-tags.php:92
 msgid "Separate tags with commas."
 msgstr ""
 
-#: page-tags/page-tags.php:73
+#: page-tags/page-tags.php:97
 msgid "Add or remove tags"
 msgstr ""
 
-#: page-tags/page-tags.php:84
-#, php-format
+#: page-tags/page-tags.php:103
+msgid "Add"
+msgstr ""
+
+#: page-tags/page-tags.php:108
 msgid "Choose from the most used tags in %s"
 msgstr ""
 
-#: related-widgets-info.php:2 related-widgets.php:135
+#. #-#-#-#-#  related-widgets.pot (Related Widgets 3.4 dev)  #-#-#-#-#
+#. Plugin Name of the plugin/theme
+#: related-widgets-info.php:2 related-widgets.php:255
 msgid "Related Widgets"
 msgstr ""
 
+#. #-#-#-#-#  related-widgets.pot (Related Widgets 3.4 dev)  #-#-#-#-#
+#. Description of the plugin/theme
 #: related-widgets-info.php:3
 msgid ""
 "WordPress widgets that let you list related posts or pages, based on their "
 "tags."
 msgstr ""
 
-#: related-widgets.php:160
+#: related-widgets.php:110
 msgid "Related Posts or Pages, based on your tags."
 msgstr ""
 
-#: related-widgets.php:167
+#: related-widgets.php:116
 msgid "Related Widget"
 msgstr ""
 
-#: related-widgets.php:257
+#: related-widgets.php:357
 msgid "Untitled"
 msgstr ""
 
-#: related-widgets.php:707
+#: related-widgets.php:810
 msgid "Title:"
 msgstr ""
 
-#: related-widgets.php:718
+#: related-widgets.php:821
 msgid "Display:"
 msgstr ""
 
-#: related-widgets.php:721
+#: related-widgets.php:824
 msgid "Posts"
 msgstr ""
 
-#: related-widgets.php:723
+#: related-widgets.php:826
 msgid "Related Posts / All Categories"
 msgstr ""
 
-#: related-widgets.php:730
-#, php-format
+#: related-widgets.php:833
 msgid "Related Posts / %s"
 msgstr ""
 
-#: related-widgets.php:736
+#: related-widgets.php:839
 msgid "Pages"
 msgstr ""
 
-#: related-widgets.php:738
+#: related-widgets.php:841
 msgid "Related Pages / All Sections"
 msgstr ""
 
-#: related-widgets.php:745
-#, php-format
+#: related-widgets.php:848
 msgid "Related Pages / %s"
 msgstr ""
 
-#: related-widgets.php:757
-#, php-format
+#: related-widgets.php:860
 msgid "%s Related Items"
 msgstr ""
 
-#: related-widgets.php:770
+#: related-widgets.php:873
 msgid "Show Descriptions"
 msgstr ""
 
-#: related-widgets.php:784
+#: related-widgets.php:887
 msgid "Related Posts"
 msgstr ""
 
@@ -150,4 +150,16 @@ msgstr ""
 
 #: widget-utils/widget-utils.php:182
 msgid "... except for silo stubs, silo maps and smart links."
+msgstr ""
+
+#. Plugin URI of the plugin/theme
+msgid "http://www.semiologic.com/software/related-widgets/"
+msgstr ""
+
+#. Author of the plugin/theme
+msgid "Denis de Bernardy & Mike Koepke"
+msgstr ""
+
+#. Author URI of the plugin/theme
+msgid "http://www.getsemiologic.com"
 msgstr ""
