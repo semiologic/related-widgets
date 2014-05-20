@@ -45,6 +45,10 @@ The [Semiologic forum](http://forum.semiologic.com) is the best place to report 
 
 == Change Log ==
 
+= 3.4.1 =
+
+- Use more full proof WP version check to alter plugin behavior instead of relying on $wp_version constant.
+
 = 3.4 =
 
 - Clear caches on WP upgrade
